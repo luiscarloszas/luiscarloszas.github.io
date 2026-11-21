@@ -1,0 +1,17 @@
+# Ficheiros de ambiente e credenciais
+.env
+.env.local
+.env.*.local
+supabase-config.js
+
+# Sistema operativo e editores
+.DS_Store
+Thumbs.db
+*.bak
+*.tmp
+.vscode/
+.idea/
+
+# Dependências (se aplicável)
+node_modules/
+dist/
