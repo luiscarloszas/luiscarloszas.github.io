@@ -1,0 +1,1998 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TFS • Simulador Comercial & Custos de Transporte</title>
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #0f172a;
+      cursor: pointer;
+      border: 2px solid #ffffff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      body {
+        background: #ffffff !important;
+      }
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-emerald-600 selection:text-white">
+
+  <!-- Toast de Feedback -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none no-print">
+    <div class="bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 text-sm font-medium border border-slate-700">
+      <span id="toast-icon" class="text-emerald-400 font-bold">✓</span>
+      <span id="toast-msg">Operação concluída.</span>
+    </div>
+  </div>
+
+  <!-- Cabeçalho Executivo -->
+  <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center font-extrabold text-lg tracking-tight shadow-md">
+          TFS
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-base sm:text-lg font-bold tracking-tight">Transportes Florêncio & Silva • Simulador Comercial</h1>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              Validado & Editável
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">7 Perfis Editáveis • CapEx & Financiamento • Turnos 24h • Descontos Escalonados & Piso 5%</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button type="button" onclick="exportProfilesJSON()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition">
+          Exportar JSON
+        </button>
+        <label class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition cursor-pointer">
+          Importar JSON
+          <input type="file" id="importJsonInput" accept=".json" class="hidden" onchange="importProfilesJSON(event)">
+        </label>
+        <button type="button" onclick="window.print()" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm transition">
+          Imprimir / PDF
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- 1. BARRA DE GESTÃO DE PERFIS EDITÁVEIS -->
+    <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5 space-y-4 no-print">
+      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+        <div class="flex-1">
+          <div class="flex items-center justify-between gap-2 mb-1.5">
+            <label for="profileSelect" class="text-xs font-bold uppercase tracking-wider text-slate-600">
+              Perfil de Viatura / Conjunto TFS (7 Tipologias Editáveis)
+            </label>
+            <span id="profileStatusBadge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              Guardado
+            </span>
+          </div>
+
+          <!-- Select pré-populado diretamente no HTML como fallback garantido -->
+          <select id="profileSelect" onchange="handleProfileChange()" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm font-semibold rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 outline-none">
+            <option value="tfs-articulado-frigo">1. Articulado 40t Frigorífico (DAF + Schmitz) — €125k + €100k</option>
+            <option value="tfs-articulado-lona">2. Articulado 40t Lona / Mega (DAF + Schmitz) — €120k + €65k</option>
+            <option value="tfs-rigido-23p-frigo">3. Rígido 23p Frigorífico — €95k + €45k</option>
+            <option value="tfs-rigido-20p-frigo">4. Rígido 20p Frigorífico — €88k + €40k</option>
+            <option value="tfs-rigido-20p-seco">5. Rígido 20p Seco / Lona — €85k + €28k</option>
+            <option value="tfs-rigido-14p-seco">6. Rígido 14p Seco / Lona — €78k + €25k</option>
+            <option value="tfs-ligeiro-frigo">7. Ligeiro 3.500 kg Frigorífico — €48k + €14k</option>
+          </select>
+        </div>
+
+        <!-- Botões de Gestão da Biblioteca -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" onclick="saveCurrentProfile()" class="px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm transition">
+            Guardar no Perfil
+          </button>
+          <button type="button" onclick="openProfileModal('create')" class="px-3 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200 transition">
+            + Novo Perfil
+          </button>
+          <button type="button" onclick="openProfileModal('rename')" class="px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold border border-slate-300 transition">
+            Renomear
+          </button>
+          <button type="button" id="deleteProfileBtn" onclick="deleteSelectedProfile()" class="hidden px-3 py-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold border border-red-200 transition">
+            Eliminar
+          </button>
+          <button type="button" onclick="resetDefaultProfiles()" class="px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-300 transition">
+            Repor Originais
+          </button>
+        </div>
+      </div>
+
+      <!-- Regime de Turnos & Operação -->
+      <div class="pt-3 border-t border-slate-100">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-600">
+            Regime de Turnos & Operação (1 Turno vs. 24h)
+          </span>
+          <span id="shiftBadge" class="text-xs font-semibold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-full w-fit">
+            1 Turno • 1 Motorista • 250 dias/ano • 100.000 km/ano
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <button type="button" id="shift-btn-1shift" onclick="setShiftMode('1shift')" class="p-3 rounded-xl border-2 border-slate-900 bg-slate-100/80 text-left transition">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold text-slate-900 uppercase">1 Turno (1 Motorista)</span>
+              <span class="text-[11px] font-bold text-emerald-700">1,0x Km Base</span>
+            </div>
+            <p class="text-[11px] text-slate-600 mt-0.5">250 dias/ano • 1 motorista • 0 noturnos</p>
+          </button>
+
+          <button type="button" id="shift-btn-24h" onclick="setShiftMode('24h')" class="p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-left transition">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold text-slate-800 uppercase">Operação 24h (2 Motoristas / Dia)</span>
+              <span class="text-[11px] font-bold text-amber-700">1,8x Km Base</span>
+            </div>
+            <p class="text-[11px] text-slate-600 mt-0.5">250 dias/ano • 2 motoristas • 1 noturno</p>
+          </button>
+
+          <button type="button" id="shift-btn-24h7d" onclick="setShiftMode('24h7d')" class="p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-left transition">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold text-slate-800 uppercase">Operação 24h/7d Contínua (3 Motoristas)</span>
+              <span class="text-[11px] font-bold text-indigo-700">2,2x Km Base</span>
+            </div>
+            <p class="text-[11px] text-slate-600 mt-0.5">300 dias/ano • 3 motoristas • 2 noturnos</p>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- GRELHA PRINCIPAL DE PARÂMETROS (2 COLUNAS) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start no-print">
+
+      <!-- COLUNA ESQUERDA: INVESTIMENTO (CAPEX) & CUSTOS FIXOS (6 colunas) -->
+      <div class="lg:col-span-6 space-y-6">
+
+        <!-- Bloco 2: Investimento & Valores da Viatura (CapEx Editável) -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-emerald-700">Valores Editáveis de Mercado</span>
+              <h2 class="text-base font-bold text-slate-900">Investimento & Valores da Viatura (CapEx)</h2>
+            </div>
+
+            <!-- Botões rápidos de variação de preço -->
+            <div class="flex items-center gap-1 flex-wrap">
+              <span class="text-[11px] font-semibold text-slate-500 mr-1">Ajustar preços:</span>
+              <button type="button" onclick="adjustVehiclePrices(-5)" class="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold border border-slate-300 transition">-5%</button>
+              <button type="button" onclick="adjustVehiclePrices(-2)" class="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold border border-slate-300 transition">-2%</button>
+              <button type="button" onclick="adjustVehiclePrices(2)" class="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold border border-slate-300 transition">+2%</button>
+              <button type="button" onclick="adjustVehiclePrices(5)" class="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold border border-slate-300 transition">+5%</button>
+              <button type="button" onclick="adjustVehiclePrices(10)" class="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold border border-slate-300 transition">+10%</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div>
+              <label for="tractorValue" class="block font-semibold text-slate-700 mb-1">Trator / Chassi (€)</label>
+              <input type="number" id="tractorValue" value="125000" min="0" step="500" class="w-full text-right text-sm font-bold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+            <div>
+              <label for="trailerValue" class="block font-semibold text-slate-700 mb-1">Semirreboque / Caixa (€)</label>
+              <input type="number" id="trailerValue" value="100000" min="0" step="500" class="w-full text-right text-sm font-bold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+            <div>
+              <label for="extrasValue" class="block font-semibold text-slate-700 mb-1">Extras / Plataforma (€)</label>
+              <input type="number" id="extrasValue" value="0" min="0" step="250" class="w-full text-right text-sm font-bold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+            <div>
+              <label for="amortMonths" class="block font-semibold text-slate-700 mb-1">Prazo Amortização (meses)</label>
+              <input type="number" id="amortMonths" value="96" min="12" max="180" step="6" class="w-full text-right text-sm font-semibold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+            <div>
+              <label for="residualPct" class="block font-semibold text-slate-700 mb-1">Valor Residual / Buyback (%)</label>
+              <input type="number" id="residualPct" value="0" min="0" max="60" step="1" class="w-full text-right text-sm font-semibold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+            <div>
+              <label for="interestRatePct" class="block font-semibold text-slate-700 mb-1">Taxa Juro / Leasing Anual (%)</label>
+              <input type="number" id="interestRatePct" value="0" min="0" max="20" step="0.25" class="w-full text-right text-sm font-semibold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+          </div>
+
+          <!-- Resumo Calculado do CapEx & Amortização -->
+          <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5 bg-slate-900 text-white rounded-xl p-3.5 text-xs">
+            <div>
+              <span class="text-slate-400 block text-[11px]">CapEx Total</span>
+              <span id="summaryCapexTotal" class="text-sm font-extrabold text-white mt-0.5 block">225.000 €</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[11px]">Valor Amortizável</span>
+              <span id="summaryAmortizable" class="text-sm font-extrabold text-slate-200 mt-0.5 block">225.000 €</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[11px]">Prestação / Amort. Mês</span>
+              <span id="summaryMonthlyCapex" class="text-sm font-extrabold text-emerald-400 mt-0.5 block">2.343,75 €</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[11px]">Impacto Diária Fixa</span>
+              <span id="summaryDailyCapex" class="text-sm font-extrabold text-amber-300 mt-0.5 block">112,50 €/dia</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Bloco 3: Custos Fixos Operacionais & Estrutura -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Operação & Estrutura</span>
+              <h2 class="text-base font-bold text-slate-900">Custos Fixos Operacionais</h2>
+            </div>
+            <span id="badgeFixedDay" class="text-xs font-extrabold text-slate-900 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+              0,00 €/dia
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <label for="workingDays" class="block font-semibold text-slate-700 mb-1">Dias Úteis / Ano</label>
+              <input type="number" id="workingDays" value="250" min="50" max="365" step="5" class="w-full text-right text-sm font-semibold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+            <div>
+              <label for="annualKm" class="block font-semibold text-slate-700 mb-1">Km Anuais / Viatura</label>
+              <input type="number" id="annualKm" value="100000" min="5000" max="450000" step="2500" class="w-full text-right text-sm font-semibold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+            <div>
+              <label for="driverMonthly" class="block font-semibold text-slate-700 mb-1">Salário / Encargos Motorista (€/mês)</label>
+              <input type="number" id="driverMonthly" value="4125" min="0" step="25" class="w-full text-right text-sm font-semibold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+            <div>
+              <label for="nightBonusMonthly" class="block font-semibold text-slate-700 mb-1">Subsídio Noturno (€/mês por noturno)</label>
+              <input type="number" id="nightBonusMonthly" value="350" min="0" step="25" class="w-full text-right text-sm font-semibold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+            <div>
+              <label for="insuranceAnnual" class="block font-semibold text-slate-700 mb-1">Seguros + CMR (€/ano)</label>
+              <input type="number" id="insuranceAnnual" value="2500" min="0" step="100" class="w-full text-right text-sm font-semibold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+            <div>
+              <label for="iucAnnual" class="block font-semibold text-slate-700 mb-1">IUC (€/ano)</label>
+              <input type="number" id="iucAnnual" value="650" min="0" step="25" class="w-full text-right text-sm font-semibold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+            <div>
+              <label for="ipoAtpAnnual" class="block font-semibold text-slate-700 mb-1">IPO / Tacógrafo / ATP (€/ano)</label>
+              <input type="number" id="ipoAtpAnnual" value="250" min="0" step="25" class="w-full text-right text-sm font-semibold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+            <div>
+              <label for="telematicsAnnual" class="block font-semibold text-slate-700 mb-1">Telemática Targa/Inofleet/Schmitz (€/ano)</label>
+              <input type="number" id="telematicsAnnual" value="480" min="0" step="20" class="w-full text-right text-sm font-semibold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+            <div class="sm:col-span-2">
+              <label for="structureAnnual" class="block font-semibold text-slate-700 mb-1">Estrutura / Parque / Gestão (€/ano)</label>
+              <input type="number" id="structureAnnual" value="3600" min="0" step="100" class="w-full text-right text-sm font-semibold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- COLUNA DIREITA: CUSTOS VARIÁVEIS & PARÂMETROS DA ROTA (6 colunas) -->
+      <div class="lg:col-span-6 space-y-6">
+
+        <!-- Bloco 4: Custos Variáveis por Km -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-amber-700">Operação por Quilómetro</span>
+              <h2 class="text-base font-bold text-slate-900">Custos Variáveis por Km</h2>
+            </div>
+            <span id="badgeVarKm" class="text-xs font-extrabold text-amber-900 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+              0,000 €/km
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <label for="fuelConsumption" class="block font-semibold text-slate-700 mb-1">Consumo Médio (L/100km)</label>
+              <input type="number" id="fuelConsumption" value="32.0" min="1" max="80" step="0.5" class="w-full text-right text-sm font-bold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label for="fuelPrice" class="font-semibold text-slate-700">Preço Gasóleo s/ IVA (€/L)</label>
+                <button type="button" onclick="applyProfessionalDiesel()" class="text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200 transition">
+                  Prof. -0,18€
+                </button>
+              </div>
+              <input type="number" id="fuelPrice" value="1.50" min="0.2" max="5.0" step="0.01" class="w-full text-right text-sm font-bold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+
+            <!-- AdBlue automático (5% do consumo a €0,85/L) -->
+            <div class="sm:col-span-2 bg-slate-50 border border-slate-200 rounded-xl p-3">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="font-bold text-slate-800">AdBlue (5% do consumo a 0,85 €/L)</span>
+                <label class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 cursor-pointer">
+                  <input type="checkbox" id="autoAdblue" checked onchange="onParameterInput()" class="rounded text-emerald-600">
+                  Cálculo Automático
+                </label>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <input type="number" id="adbluePrice" value="0.85" min="0" max="5" step="0.05" class="w-full text-right text-sm font-semibold border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white outline-none" oninput="onParameterInput()">
+                  <span class="block text-[10px] text-slate-500 mt-0.5 text-right">Preço AdBlue (€/L)</span>
+                </div>
+                <div>
+                  <input type="number" id="adbluePerKm" value="0.0136" min="0" max="1" step="0.0005" class="w-full text-right text-sm font-bold border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-100 text-slate-800 outline-none" oninput="onParameterInput()">
+                  <span class="block text-[10px] text-slate-500 mt-0.5 text-right">Custo AdBlue (€/km)</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label for="maintPerKm" class="block font-semibold text-slate-700 mb-1">Manutenção Preventiva/Corretiva (€/km)</label>
+              <input type="number" id="maintPerKm" value="0.050" min="0" max="1" step="0.002" class="w-full text-right text-sm font-semibold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+            <div>
+              <label for="tiresAnnual" class="block font-semibold text-slate-700 mb-1">Pneus (€/ano)</label>
+              <input type="number" id="tiresAnnual" value="1400" min="0" max="50000" step="50" class="w-full text-right text-sm font-semibold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+            <div>
+              <label for="reeferPerKm" class="block font-semibold text-slate-700 mb-1">Frio Carrier / Thermo King (€/km)</label>
+              <input type="number" id="reeferPerKm" value="0.045" min="0" max="1" step="0.002" class="w-full text-right text-sm font-semibold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+            <div>
+              <label for="washAtpPerKm" class="block font-semibold text-slate-700 mb-1">Lavagem ATP / Higienização (€/km)</label>
+              <input type="number" id="washAtpPerKm" value="0.012" min="0" max="1" step="0.001" class="w-full text-right text-sm font-semibold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+            <div class="sm:col-span-2">
+              <label for="tollsPerKm" class="block font-semibold text-slate-700 mb-1">Portagens (€/km — 0,00 se faturadas à parte)</label>
+              <input type="number" id="tollsPerKm" value="0.000" min="0" max="2" step="0.01" class="w-full text-right text-sm font-semibold border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" oninput="onParameterInput()">
+            </div>
+          </div>
+        </section>
+
+        <!-- Parâmetros da Rota Simulada & Ocupação -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Simulação Diária</span>
+              <h2 class="text-base font-bold text-slate-900">Rota Diária, Margem Alvo & Vazio</h2>
+            </div>
+            <span id="headerDailyCost" class="text-xs font-extrabold text-slate-900 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+              Custo: 0,00 €/dia
+            </span>
+          </div>
+
+          <div class="space-y-4 text-xs">
+            <div>
+              <div class="flex justify-between font-semibold mb-1">
+                <label for="simKm" class="text-slate-700">Quilómetros Simulados no Dia (km)</label>
+                <span id="simKmLabel" class="font-bold text-slate-900">400 km</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <input type="range" id="simKmRange" min="50" max="1200" step="10" value="400" class="flex-1" oninput="syncSliderToNumber('simKm', this.value)">
+                <input type="number" id="simKm" value="400" min="1" max="2000" step="5" class="w-24 text-right text-sm font-bold border border-slate-300 rounded-xl px-2.5 py-1.5 outline-none" oninput="syncNumberToSlider('simKm', this.value)">
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between font-semibold mb-1">
+                <label for="marginPct" class="text-slate-700">Margem Comercial Alvo Base s/ Custo (%)</label>
+                <span id="marginPctLabel" class="font-bold text-emerald-700">10,0%</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <input type="range" id="marginPctRange" min="0" max="40" step="0.5" value="10" class="flex-1" oninput="syncSliderToNumber('marginPct', this.value)">
+                <input type="number" id="marginPct" value="10" min="0" max="100" step="0.5" class="w-24 text-right text-sm font-bold border border-slate-300 rounded-xl px-2.5 py-1.5 outline-none" oninput="syncNumberToSlider('marginPct', this.value)">
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between font-semibold mb-1">
+                <label for="emptyKmPct" class="text-slate-700">Taxa de Quilómetros em Vazio (%)</label>
+                <span id="emptyKmPctLabel" class="font-bold text-amber-700">12,0%</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <input type="range" id="emptyKmPctRange" min="0" max="50" step="1" value="12" class="flex-1" oninput="syncSliderToNumber('emptyKmPct', this.value)">
+                <input type="number" id="emptyKmPct" value="12" min="0" max="80" step="1" class="w-24 text-right text-sm font-bold border border-slate-300 rounded-xl px-2.5 py-1.5 outline-none" oninput="syncNumberToSlider('emptyKmPct', this.value)">
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+
+    <!-- 5. MODALIDADES DE FATURAÇÃO AO CLIENTE & DESCONTOS ESCALONADOS (SECÇÃO INFERIOR CORRIGIDA) -->
+    <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-emerald-700">Cotação Comercial ao Cliente</span>
+          <h2 class="text-lg font-extrabold text-slate-900">Modalidade de Faturação & Política de Descontos Escalonados</h2>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="px-3 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200">
+            Margem Tabela: <strong id="badgeTargetMargin">10,0%</strong>
+          </span>
+          <span id="badgeRealMargin" class="px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">
+            Margem Líquida Real: 10,0%
+          </span>
+        </div>
+      </div>
+
+      <!-- 3 Cartões Clicáveis de Modalidade de Faturação -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 no-print" role="tablist">
+        <button type="button" id="mode-btn-hybrid" onclick="setBillingMode('hybrid')" class="p-4 rounded-xl border-2 border-emerald-600 bg-emerald-50/60 text-left transition shadow-sm">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-extrabold uppercase text-emerald-800">1. Modelo Híbrido</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600 text-white">Recomendado</span>
+          </div>
+          <p class="text-sm font-bold text-slate-900">Diária Fixa + €/km Variável</p>
+          <p class="text-xs text-slate-600 mt-1">Fixos cobertos pela diária; variáveis faturados ao km percorrido.</p>
+        </button>
+
+        <button type="button" id="mode-btn-perkm" onclick="setBillingMode('perkm')" class="p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white text-left transition">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-extrabold uppercase text-slate-700">2. 100% ao Quilómetro</span>
+          </div>
+          <p class="text-sm font-bold text-slate-900">Tarifa Única (€/km Total)</p>
+          <p class="text-xs text-slate-600 mt-1">Custos fixos diluídos nos quilómetros anuais contratados.</p>
+        </button>
+
+        <button type="button" id="mode-btn-daily" onclick="setBillingMode('daily')" class="p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white text-left transition">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-extrabold uppercase text-slate-700">3. 100% à Diária</span>
+          </div>
+          <p class="text-sm font-bold text-slate-900">Diária Fechada + Km Extra</p>
+          <p class="text-xs text-slate-600 mt-1">Inclui plafond diário de km e tarifa extra para excedentes.</p>
+        </button>
+      </div>
+
+      <!-- Painel de Plafond de Km/Dia (visível apenas no modo 100% à Diária) -->
+      <div id="dailyPlafondPanel" class="hidden p-4 rounded-xl bg-amber-50/80 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print">
+        <div class="text-xs">
+          <span class="font-extrabold text-amber-950 block">Configuração do Plafond Diário (100% à Diária):</span>
+          <span class="text-amber-800">Quilómetros incluídos na diária fechada. Acima deste limite aplica-se a tarifa de km extra.</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <label for="dailyIncludedKm" class="text-xs font-bold text-amber-950">Plafond:</label>
+          <input type="number" id="dailyIncludedKm" value="400" min="50" max="1500" step="10" class="w-24 text-right text-sm font-extrabold border border-amber-300 rounded-lg px-2.5 py-1.5 bg-white text-amber-950 outline-none" oninput="calculateAll()">
+          <span class="text-xs font-bold text-amber-950">km/dia</span>
+        </div>
+      </div>
+
+      <!-- Resumo da Tarifa Final ao Cliente -->
+      <div id="billingSummaryCards" class="grid grid-cols-1 sm:grid-cols-3 gap-4"></div>
+
+      <!-- Módulo de Descontos Comerciais Escalonados & Piso de 5,0% -->
+      <div class="pt-4 border-t border-slate-100 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 class="text-sm font-extrabold text-slate-900">Descontos Comerciais Escalonados & Proteção de Margem</h3>
+            <p class="text-xs text-slate-500">Selecione um escalão de frota dedicada ou ajuste livremente respeitando o piso de 5,0%.</p>
+          </div>
+          <div class="flex items-center gap-2 text-xs bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 no-print">
+            <label for="floorMarginPct" class="font-semibold text-slate-600">Piso Margem Líquida:</label>
+            <input type="number" id="floorMarginPct" value="5.0" min="0" max="30" step="0.5" class="w-16 text-right font-extrabold text-slate-900 bg-white border border-slate-300 rounded-lg px-2 py-0.5 outline-none" oninput="calculateAll()">
+            <span class="font-bold text-slate-700">%</span>
+          </div>
+        </div>
+
+        <!-- Botões Rápidos de Escalão -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 no-print">
+          <button type="button" onclick="applyDiscountTier(1, 0.00)" data-tier="1" class="tier-btn p-3 rounded-xl border-2 border-slate-900 bg-slate-100 text-left transition">
+            <span class="block text-xs font-extrabold text-slate-900">1 Conjunto</span>
+            <span class="block text-xs font-bold text-emerald-700 mt-0.5">0,00% Desconto</span>
+          </button>
+          <button type="button" onclick="applyDiscountTier(5, 2.00)" data-tier="5" class="tier-btn p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-left transition">
+            <span class="block text-xs font-extrabold text-slate-800">5 Conjuntos</span>
+            <span class="block text-xs font-bold text-slate-600 mt-0.5">2,00% Desconto</span>
+          </button>
+          <button type="button" onclick="applyDiscountTier(10, 3.50)" data-tier="10" class="tier-btn p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-left transition">
+            <span class="block text-xs font-extrabold text-slate-800">10 Conjuntos</span>
+            <span class="block text-xs font-bold text-slate-600 mt-0.5">3,50% Desconto</span>
+          </button>
+          <button type="button" onclick="applyDiscountTier(25, null)" data-tier="25" class="tier-btn p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-left transition">
+            <span class="block text-xs font-extrabold text-slate-800">25 Conjuntos</span>
+            <span id="tier25Label" class="block text-xs font-bold text-emerald-700 mt-0.5">4,55% (Teto Piso 5%)</span>
+          </button>
+        </div>
+
+        <!-- Controlo Fino de Desconto + Incidência -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center bg-slate-50 p-3.5 rounded-xl border border-slate-200 no-print">
+          <div class="md:col-span-7">
+            <div class="flex justify-between text-xs font-semibold mb-1">
+              <label for="discountPct" class="text-slate-700">Desconto Comercial Aplicado (%)</label>
+              <span class="text-slate-600">Teto Admissível: <strong id="maxDiscountLabel" class="text-slate-900">4,55%</strong></span>
+            </div>
+            <div class="flex items-center gap-3">
+              <input type="range" id="discountPctRange" min="0" max="12" step="0.05" value="0" class="flex-1" oninput="syncDiscountRange(this.value)">
+              <input type="number" id="discountPct" value="0" min="0" max="50" step="0.05" class="w-24 text-right text-sm font-extrabold border border-slate-300 rounded-xl px-2.5 py-1.5 bg-white outline-none" oninput="syncDiscountInput(this.value)">
+            </div>
+          </div>
+
+          <div class="md:col-span-5">
+            <span class="block text-xs font-semibold text-slate-700 mb-1">Incidência do Desconto</span>
+            <div class="grid grid-cols-2 gap-1.5 bg-slate-200/80 p-1 rounded-xl">
+              <button type="button" id="disc-scope-total" onclick="setDiscountScope('total')" class="py-1.5 px-2.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-sm transition">
+                Sobre Total
+              </button>
+              <button type="button" id="disc-scope-fixed" onclick="setDiscountScope('fixed')" class="py-1.5 px-2.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition">
+                Apenas Diária Fixa
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Semáforo de Proteção do Piso de 5,0% -->
+        <div id="marginGuardBox" class="p-3.5 rounded-xl border bg-emerald-50 border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-start gap-2.5">
+            <span id="marginGuardDot" class="text-emerald-600 font-bold mt-0.5">●</span>
+            <div class="text-xs">
+              <strong id="marginGuardTitle" class="text-emerald-950 block">Margem Líquida Protegida (10,0%)</strong>
+              <span id="marginGuardDesc" class="text-emerald-800">O desconto aplicado respeita o piso mínimo de 5,0% da TFS.</span>
+            </div>
+          </div>
+          <button type="button" id="fixToFloorBtn" onclick="fixDiscountToFloor()" class="hidden px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-sm transition whitespace-nowrap no-print">
+            Corrigir para o Teto (<span id="fixToFloorPct">4,55%</span>)
+          </button>
+        </div>
+
+        <!-- Tabela Dinâmica dos 4 Escalões para o Perfil Atual -->
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-900 text-white font-bold">
+                <th class="py-2.5 px-3">Escalão Contratado</th>
+                <th class="py-2.5 px-3 text-right">Desconto</th>
+                <th class="py-2.5 px-3 text-right">Modelo Híbrido (Fixo + Km)</th>
+                <th class="py-2.5 px-3 text-right">100% ao Km</th>
+                <th class="py-2.5 px-3 text-right">Margem Real</th>
+                <th class="py-2.5 px-3 text-right">Faturação Anual</th>
+                <th class="py-2.5 px-3 text-right">EBITDA Anual</th>
+              </tr>
+            </thead>
+            <tbody id="tiersTableBody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tabela de Análise de Risco: Baixa vs. Alta Quilometragem -->
+      <div class="pt-4 border-t border-slate-100">
+        <h3 class="text-sm font-extrabold text-slate-900 mb-2">Análise de Risco Diário (Baixa vs. Alta Quilometragem)</h3>
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
+                <th class="py-2.5 px-3">Cenário Operacional</th>
+                <th class="py-2.5 px-3 text-right">Km / Dia</th>
+                <th class="py-2.5 px-3 text-right">Custo Real / Dia</th>
+                <th class="py-2.5 px-3 text-right">Receita Modalidade Ativa</th>
+                <th class="py-2.5 px-3 text-right">Resultado / Dia</th>
+                <th class="py-2.5 px-3 text-right">Margem Real</th>
+              </tr>
+            </thead>
+            <tbody id="riskTableBody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. PAINEL EXECUTIVO DE 8 KPIs + MULTIPLICADOR DE FROTA + PROPOSTA COMERCIAL -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- 8 KPIs Executivos (6 colunas) -->
+      <section class="lg:col-span-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <div class="mb-4">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Indicadores de Gestão</span>
+          <h3 class="text-base font-extrabold text-slate-900">Painel Executivo de 8 KPIs (Por Viatura)</h3>
+        </div>
+        <div id="executiveKpisGrid" class="grid grid-cols-2 gap-3"></div>
+      </section>
+
+      <!-- Multiplicador de Frota (6 colunas) -->
+      <section class="lg:col-span-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-emerald-700">Escala Consolidada</span>
+            <h3 class="text-base font-extrabold text-slate-900">Multiplicador de Frota & Motoristas</h3>
+          </div>
+          <div class="flex items-center gap-1.5 text-xs no-print">
+            <label for="driverReservePct" class="font-semibold text-slate-600">Reserva:</label>
+            <select id="driverReservePct" onchange="calculateAll()" class="bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 font-bold text-slate-900 outline-none">
+              <option value="0">0%</option>
+              <option value="5">+5%</option>
+              <option value="10" selected>+10%</option>
+              <option value="15">+15%</option>
+              <option value="20">+20%</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Atalhos de Dimensão de Frota -->
+        <div class="flex flex-wrap items-center gap-1.5 no-print">
+          <button type="button" onclick="setFleetSize(1)" data-fleet="1" class="fleet-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 text-white border border-slate-900 transition">1</button>
+          <button type="button" onclick="setFleetSize(10)" data-fleet="10" class="fleet-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 transition">10</button>
+          <button type="button" onclick="setFleetSize(25)" data-fleet="25" class="fleet-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 transition">25</button>
+          <button type="button" onclick="setFleetSize(50)" data-fleet="50" class="fleet-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 transition">50</button>
+          <button type="button" onclick="setFleetSize(100)" data-fleet="100" class="fleet-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 transition">100</button>
+          <div class="flex items-center gap-1.5 ml-auto">
+            <label for="fleetSize" class="text-xs font-semibold text-slate-600">Livre:</label>
+            <input type="number" id="fleetSize" value="1" min="1" max="1000" step="1" class="w-20 text-right text-xs font-extrabold border border-slate-300 rounded-lg px-2 py-1.5 outline-none" oninput="onFleetSizeInput(this.value)">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 text-xs">
+          <div class="bg-slate-900 text-white rounded-xl p-3.5">
+            <span class="text-[11px] font-bold uppercase text-slate-400 block">Faturação Anual Frota</span>
+            <span id="fleetRevYear" class="text-base sm:text-lg font-extrabold text-white block mt-1">0 €</span>
+            <span id="fleetKmYear" class="text-[11px] text-slate-400 mt-0.5 block">0 km/ano</span>
+          </div>
+          <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5">
+            <span class="text-[11px] font-bold uppercase text-emerald-800 block">EBITDA Consolidado</span>
+            <span id="fleetEbitdaYear" class="text-base sm:text-lg font-extrabold text-emerald-950 block mt-1">0 €</span>
+            <span id="fleetNetYear" class="text-[11px] text-emerald-700 mt-0.5 block">Lucro Líquido: 0 €</span>
+          </div>
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5">
+            <span class="text-[11px] font-bold uppercase text-slate-600 block">Total Motoristas</span>
+            <span id="fleetDriversTotal" class="text-base sm:text-lg font-extrabold text-slate-900 block mt-1">1</span>
+            <span id="fleetDriversDetail" class="text-[11px] text-slate-500 mt-0.5 block">1 base + 0 reserva</span>
+          </div>
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5">
+            <span class="text-[11px] font-bold uppercase text-slate-600 block">CapEx Frota & Gasóleo</span>
+            <span id="fleetCapexTotal" class="text-base sm:text-lg font-extrabold text-slate-900 block mt-1">225.000 €</span>
+            <span id="fleetFuelYear" class="text-[11px] text-slate-500 mt-0.5 block">0 L gasóleo/ano</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Exportação de Proposta Comercial -->
+    <section class="bg-slate-900 text-white rounded-2xl shadow-md p-5 sm:p-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Documento Pronto a Enviar</span>
+          <h3 class="text-base font-extrabold">Proposta Comercial TFS</h3>
+        </div>
+        <button type="button" onclick="copyProposalToClipboard()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow transition no-print">
+          Copiar Proposta para Área de Transferência
+        </button>
+      </div>
+      <textarea id="proposalOutput" rows="9" readonly class="w-full bg-slate-800 text-slate-100 text-xs font-mono leading-relaxed p-4 rounded-xl border border-slate-700 focus:outline-none resize-none"></textarea>
+    </section>
+
+  </main>
+
+  <!-- Modal Criar / Renomear Perfil -->
+  <div id="profileModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+      <h3 id="profileModalTitle" class="text-base font-bold text-slate-900 mb-1">Novo Perfil de Viatura</h3>
+      <p id="profileModalSubtitle" class="text-xs text-slate-500 mb-4">Introduza a designação para este perfil de frota.</p>
+      <label for="profileModalInput" class="block text-xs font-bold text-slate-700 mb-1">Nome do Perfil</label>
+      <input type="text" id="profileModalInput" placeholder="Ex: DAF XG + Schmitz Frigo 24h" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:ring-2 focus:ring-emerald-600 outline-none mb-4">
+      <div class="flex justify-end gap-2">
+        <button type="button" onclick="closeProfileModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
+        <button type="button" onclick="confirmProfileModal()" class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. BIBLIOTECA BASE DOS 7 PERFIS PRÉ-CONFIGURADOS DA FROTA TFS
+    // =========================================================================
+    const STORAGE_KEY = 'tfs_simulador_biblioteca_v7';
+
+    const DEFAULT_PROFILES = [
+      {
+        id: 'tfs-articulado-frigo',
+        name: '1. Articulado 40t Frigorífico (DAF + Schmitz) — €125k + €100k',
+        isDefault: true,
+        tractorValue: 125000,
+        trailerValue: 100000,
+        extrasValue: 0,
+        amortMonths: 96,
+        residualPct: 0,
+        interestRatePct: 0,
+        workingDays: 250,
+        baseAnnualKm: 100000,
+        fuelConsumption: 32.0,
+        fuelPrice: 1.50,
+        maintPerKm: 0.050,
+        tiresAnnual: 1400,
+        reeferPerKm: 0.045,
+        washAtpPerKm: 0.012,
+        tollsPerKm: 0.00
+      },
+      {
+        id: 'tfs-articulado-lona',
+        name: '2. Articulado 40t Lona / Mega (DAF + Schmitz) — €120k + €65k',
+        isDefault: true,
+        tractorValue: 120000,
+        trailerValue: 65000,
+        extrasValue: 0,
+        amortMonths: 96,
+        residualPct: 0,
+        interestRatePct: 0,
+        workingDays: 250,
+        baseAnnualKm: 105000,
+        fuelConsumption: 30.0,
+        fuelPrice: 1.50,
+        maintPerKm: 0.045,
+        tiresAnnual: 1300,
+        reeferPerKm: 0.000,
+        washAtpPerKm: 0.005,
+        tollsPerKm: 0.00
+      },
+      {
+        id: 'tfs-rigido-23p-frigo',
+        name: '3. Rígido 23p Frigorífico — €95k + €45k',
+        isDefault: true,
+        tractorValue: 95000,
+        trailerValue: 45000,
+        extrasValue: 0,
+        amortMonths: 84,
+        residualPct: 0,
+        interestRatePct: 0,
+        workingDays: 250,
+        baseAnnualKm: 75000,
+        fuelConsumption: 24.0,
+        fuelPrice: 1.50,
+        maintPerKm: 0.040,
+        tiresAnnual: 1000,
+        reeferPerKm: 0.040,
+        washAtpPerKm: 0.012,
+        tollsPerKm: 0.00
+      },
+      {
+        id: 'tfs-rigido-20p-frigo',
+        name: '4. Rígido 20p Frigorífico — €88k + €40k',
+        isDefault: true,
+        tractorValue: 88000,
+        trailerValue: 40000,
+        extrasValue: 0,
+        amortMonths: 84,
+        residualPct: 0,
+        interestRatePct: 0,
+        workingDays: 250,
+        baseAnnualKm: 72000,
+        fuelConsumption: 22.5,
+        fuelPrice: 1.50,
+        maintPerKm: 0.038,
+        tiresAnnual: 950,
+        reeferPerKm: 0.038,
+        washAtpPerKm: 0.012,
+        tollsPerKm: 0.00
+      },
+      {
+        id: 'tfs-rigido-20p-seco',
+        name: '5. Rígido 20p Seco / Lona — €85k + €28k',
+        isDefault: true,
+        tractorValue: 85000,
+        trailerValue: 28000,
+        extrasValue: 0,
+        amortMonths: 84,
+        residualPct: 0,
+        interestRatePct: 0,
+        workingDays: 250,
+        baseAnnualKm: 72000,
+        fuelConsumption: 21.5,
+        fuelPrice: 1.50,
+        maintPerKm: 0.035,
+        tiresAnnual: 950,
+        reeferPerKm: 0.000,
+        washAtpPerKm: 0.005,
+        tollsPerKm: 0.00
+      },
+      {
+        id: 'tfs-rigido-14p-seco',
+        name: '6. Rígido 14p Seco / Lona — €78k + €25k',
+        isDefault: true,
+        tractorValue: 78000,
+        trailerValue: 25000,
+        extrasValue: 0,
+        amortMonths: 84,
+        residualPct: 0,
+        interestRatePct: 0,
+        workingDays: 250,
+        baseAnnualKm: 65000,
+        fuelConsumption: 21.0,
+        fuelPrice: 1.50,
+        maintPerKm: 0.035,
+        tiresAnnual: 900,
+        reeferPerKm: 0.000,
+        washAtpPerKm: 0.005,
+        tollsPerKm: 0.00
+      },
+      {
+        id: 'tfs-ligeiro-frigo',
+        name: '7. Ligeiro 3.500 kg Frigorífico — €48k + €14k',
+        isDefault: true,
+        tractorValue: 48000,
+        trailerValue: 14000,
+        extrasValue: 0,
+        amortMonths: 72,
+        residualPct: 0,
+        interestRatePct: 0,
+        workingDays: 250,
+        baseAnnualKm: 60000,
+        fuelConsumption: 11.5,
+        fuelPrice: 1.50,
+        maintPerKm: 0.030,
+        tiresAnnual: 700,
+        reeferPerKm: 0.025,
+        washAtpPerKm: 0.010,
+        tollsPerKm: 0.00
+      }
+    ];
+
+    // =========================================================================
+    // 2. ESTADO GLOBAL DA APLICAÇÃO
+    // =========================================================================
+    let profilesList = [];
+    let currentBillingMode = 'hybrid'; // 'hybrid' | 'perkm' | 'daily'
+    let currentShiftMode = '1shift';   // '1shift' | '24h' | '24h7d'
+    let discountScope = 'total';       // 'total' | 'fixed'
+    let isDirty = false;
+    let modalMode = 'create';
+
+    // =========================================================================
+    // 3. UTILITÁRIOS SEGUROS DE DOM, FORMATAÇÃO E LOCALSTORAGE
+    // =========================================================================
+    function getEl(id) {
+      return document.getElementById(id);
+    }
+
+    function getNumVal(id, fallback = 0) {
+      const el = getEl(id);
+      if (!el) return fallback;
+      const parsed = parseFloat(el.value);
+      return Number.isFinite(parsed) ? parsed : fallback;
+    }
+
+    function setInputVal(id, val) {
+      const el = getEl(id);
+      if (el) el.value = val;
+    }
+
+    function formatEUR(val, decimals = 2) {
+      const safe = Number.isFinite(val) ? val : 0;
+      return safe.toLocaleString('pt-PT', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+      }) + ' €';
+    }
+
+    function formatInt(val) {
+      const safe = Number.isFinite(val) ? val : 0;
+      return Math.round(safe).toLocaleString('pt-PT');
+    }
+
+    function formatNum(val, decimals = 1) {
+      const safe = Number.isFinite(val) ? val : 0;
+      return safe.toLocaleString('pt-PT', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+      });
+    }
+
+    function cloneDefaults() {
+      return JSON.parse(JSON.stringify(DEFAULT_PROFILES));
+    }
+
+    function loadProfilesFromStorage() {
+      try {
+        const raw = window.localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          profilesList = cloneDefaults();
+          return;
+        }
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].id && parsed[0].name) {
+          profilesList = parsed;
+        } else {
+          profilesList = cloneDefaults();
+        }
+      } catch (err) {
+        profilesList = cloneDefaults();
+      }
+    }
+
+    function persistProfilesToStorage() {
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(profilesList));
+      } catch (err) {
+        // Ignora silenciosamente se localStorage estiver bloqueado pelo navegador
+      }
+    }
+
+    // =========================================================================
+    // 4. GESTÃO DE PERFIS EDITÁVEIS
+    // =========================================================================
+    function renderProfileSelect(selectedId) {
+      const select = getEl('profileSelect');
+      if (!select) return;
+
+      const list = Array.isArray(profilesList) && profilesList.length > 0 ? profilesList : cloneDefaults();
+      select.innerHTML = '';
+
+      list.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p.id;
+        option.textContent = p.name;
+        select.appendChild(option);
+      });
+
+      const exists = list.some(p => p.id === selectedId);
+      select.value = exists ? selectedId : list[0].id;
+      updateDeleteProfileVisibility();
+    }
+
+    function updateDeleteProfileVisibility() {
+      const select = getEl('profileSelect');
+      const delBtn = getEl('deleteProfileBtn');
+      if (!select || !delBtn) return;
+
+      const current = profilesList.find(p => p.id === select.value);
+      if (current && !current.isDefault) {
+        delBtn.classList.remove('hidden');
+      } else {
+        delBtn.classList.add('hidden');
+      }
+    }
+
+    function setDirtyState(dirty) {
+      isDirty = dirty;
+      const badge = getEl('profileStatusBadge');
+      if (!badge) return;
+
+      if (dirty) {
+        badge.textContent = 'Editado - não guardado';
+        badge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300';
+      } else {
+        badge.textContent = 'Guardado';
+        badge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
+      }
+    }
+
+    function getShiftConfig() {
+      if (currentShiftMode === '24h') {
+        return { drivers: 2, nightDrivers: 1, days: 250, kmMultiplier: 1.8, label: 'Operação 24h (2 Motoristas)' };
+      }
+      if (currentShiftMode === '24h7d') {
+        return { drivers: 3, nightDrivers: 2, days: 300, kmMultiplier: 2.2, label: 'Operação 24h/7d Contínua (3 Motoristas)' };
+      }
+      return { drivers: 1, nightDrivers: 0, days: 250, kmMultiplier: 1.0, label: '1 Turno (1 Motorista)' };
+    }
+
+    function handleProfileChange() {
+      const select = getEl('profileSelect');
+      if (!select) return;
+
+      const profile = profilesList.find(p => p.id === select.value) || profilesList[0] || DEFAULT_PROFILES[0];
+      const shift = getShiftConfig();
+
+      setInputVal('tractorValue', profile.tractorValue ?? 125000);
+      setInputVal('trailerValue', profile.trailerValue ?? 100000);
+      setInputVal('extrasValue', profile.extrasValue ?? 0);
+      setInputVal('amortMonths', profile.amortMonths ?? 96);
+      setInputVal('residualPct', profile.residualPct ?? 0);
+      setInputVal('interestRatePct', profile.interestRatePct ?? 0);
+
+      setInputVal('fuelConsumption', profile.fuelConsumption ?? 32.0);
+      setInputVal('fuelPrice', profile.fuelPrice ?? 1.50);
+      setInputVal('maintPerKm', profile.maintPerKm ?? 0.050);
+      setInputVal('tiresAnnual', profile.tiresAnnual ?? 1400);
+      setInputVal('reeferPerKm', profile.reeferPerKm ?? 0.045);
+      setInputVal('washAtpPerKm', profile.washAtpPerKm ?? 0.012);
+      setInputVal('tollsPerKm', profile.tollsPerKm ?? 0.00);
+
+      if (profile.driverMonthly !== undefined) setInputVal('driverMonthly', profile.driverMonthly);
+      if (profile.nightBonusMonthly !== undefined) setInputVal('nightBonusMonthly', profile.nightBonusMonthly);
+      if (profile.insuranceAnnual !== undefined) setInputVal('insuranceAnnual', profile.insuranceAnnual);
+      if (profile.iucAnnual !== undefined) setInputVal('iucAnnual', profile.iucAnnual);
+      if (profile.ipoAtpAnnual !== undefined) setInputVal('ipoAtpAnnual', profile.ipoAtpAnnual);
+      if (profile.telematicsAnnual !== undefined) setInputVal('telematicsAnnual', profile.telematicsAnnual);
+      if (profile.structureAnnual !== undefined) setInputVal('structureAnnual', profile.structureAnnual);
+
+      const baseDays = profile.workingDays || 250;
+      const effectiveDays = currentShiftMode === '24h7d' ? 300 : baseDays;
+      const baseKm = profile.baseAnnualKm || 100000;
+      const effectiveAnnualKm = Math.round(baseKm * shift.kmMultiplier);
+      const effectiveDailyKm = Math.max(1, Math.round(effectiveAnnualKm / effectiveDays));
+
+      setInputVal('workingDays', effectiveDays);
+      setInputVal('annualKm', effectiveAnnualKm);
+      setInputVal('simKm', effectiveDailyKm);
+      setInputVal('simKmRange', Math.min(1200, effectiveDailyKm));
+      setInputVal('dailyIncludedKm', effectiveDailyKm);
+
+      updateDeleteProfileVisibility();
+      setDirtyState(false);
+      calculateAll();
+    }
+
+    function readCurrentProfileFields(existingProfile) {
+      const shift = getShiftConfig();
+      const currentAnnualKm = getNumVal('annualKm', 100000);
+      return {
+        ...existingProfile,
+        tractorValue: getNumVal('tractorValue', 125000),
+        trailerValue: getNumVal('trailerValue', 100000),
+        extrasValue: getNumVal('extrasValue', 0),
+        amortMonths: Math.max(1, getNumVal('amortMonths', 96)),
+        residualPct: getNumVal('residualPct', 0),
+        interestRatePct: getNumVal('interestRatePct', 0),
+        workingDays: Math.max(1, getNumVal('workingDays', 250)),
+        baseAnnualKm: Math.max(1000, Math.round(currentAnnualKm / shift.kmMultiplier)),
+        driverMonthly: getNumVal('driverMonthly', 4125),
+        nightBonusMonthly: getNumVal('nightBonusMonthly', 350),
+        insuranceAnnual: getNumVal('insuranceAnnual', 2500),
+        iucAnnual: getNumVal('iucAnnual', 650),
+        ipoAtpAnnual: getNumVal('ipoAtpAnnual', 250),
+        telematicsAnnual: getNumVal('telematicsAnnual', 480),
+        structureAnnual: getNumVal('structureAnnual', 3600),
+        fuelConsumption: getNumVal('fuelConsumption', 32.0),
+        fuelPrice: getNumVal('fuelPrice', 1.50),
+        maintPerKm: getNumVal('maintPerKm', 0.050),
+        tiresAnnual: getNumVal('tiresAnnual', 1400),
+        reeferPerKm: getNumVal('reeferPerKm', 0.045),
+        washAtpPerKm: getNumVal('washAtpPerKm', 0.012),
+        tollsPerKm: getNumVal('tollsPerKm', 0.00)
+      };
+    }
+
+    function saveCurrentProfile() {
+      const select = getEl('profileSelect');
+      if (!select) return;
+      const idx = profilesList.findIndex(p => p.id === select.value);
+      if (idx === -1) return;
+
+      profilesList[idx] = readCurrentProfileFields(profilesList[idx]);
+      persistProfilesToStorage();
+      setDirtyState(false);
+      showToast(`Alterações guardadas em "${profilesList[idx].name}".`);
+    }
+
+    function openProfileModal(mode) {
+      modalMode = mode;
+      const modal = getEl('profileModal');
+      const title = getEl('profileModalTitle');
+      const sub = getEl('profileModalSubtitle');
+      const input = getEl('profileModalInput');
+      const select = getEl('profileSelect');
+      if (!modal || !input || !select) return;
+
+      const current = profilesList.find(p => p.id === select.value);
+      if (mode === 'rename') {
+        title.textContent = 'Renomear Perfil Atual';
+        sub.textContent = 'Atualize a designação deste perfil na lista.';
+        input.value = current ? current.name : '';
+      } else {
+        title.textContent = 'Criar Novo Perfil de Viatura';
+        sub.textContent = 'Guarda uma nova configuração de viatura com os valores atuais.';
+        input.value = '';
+      }
+
+      modal.classList.remove('hidden');
+      input.focus();
+    }
+
+    function closeProfileModal() {
+      const modal = getEl('profileModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function confirmProfileModal() {
+      const input = getEl('profileModalInput');
+      const select = getEl('profileSelect');
+      if (!input || !select) return;
+
+      const newName = input.value.trim();
+      if (!newName) {
+        showToast('Introduza um nome válido para o perfil.', true);
+        return;
+      }
+
+      if (modalMode === 'rename') {
+        const idx = profilesList.findIndex(p => p.id === select.value);
+        if (idx !== -1) {
+          profilesList[idx].name = newName;
+          persistProfilesToStorage();
+          renderProfileSelect(profilesList[idx].id);
+          showToast('Perfil renomeado com sucesso.');
+        }
+      } else {
+        const newId = 'tfs-custom-' + Date.now();
+        const created = readCurrentProfileFields({
+          id: newId,
+          name: newName,
+          isDefault: false
+        });
+        profilesList.push(created);
+        persistProfilesToStorage();
+        renderProfileSelect(newId);
+        setDirtyState(false);
+        showToast(`Novo perfil "${newName}" criado.`);
+      }
+
+      closeProfileModal();
+      calculateAll();
+    }
+
+    function deleteSelectedProfile() {
+      const select = getEl('profileSelect');
+      if (!select) return;
+      const current = profilesList.find(p => p.id === select.value);
+      if (!current || current.isDefault) return;
+
+      profilesList = profilesList.filter(p => p.id !== current.id);
+      persistProfilesToStorage();
+      renderProfileSelect(profilesList[0].id);
+      handleProfileChange();
+      showToast('Perfil personalizado eliminado.');
+    }
+
+    function resetDefaultProfiles() {
+      profilesList = cloneDefaults();
+      persistProfilesToStorage();
+      renderProfileSelect(profilesList[0].id);
+      handleProfileChange();
+      showToast('Os 7 perfis originais da TFS foram repostos.');
+    }
+
+    function exportProfilesJSON() {
+      try {
+        const payload = {
+          empresa: 'Transportes Florêncio & Silva (TFS)',
+          exportadoEm: new Date().toISOString(),
+          perfis: profilesList
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `TFS_Perfis_Frota_${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Biblioteca de perfis exportada em JSON.');
+      } catch (err) {
+        showToast('Erro ao exportar ficheiro JSON.', true);
+      }
+    }
+
+    function importProfilesJSON(event) {
+      const file = event && event.target && event.target.files ? event.target.files[0] : null;
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (data && Array.isArray(data.perfis) && data.perfis.length > 0) {
+            profilesList = data.perfis;
+            persistProfilesToStorage();
+            renderProfileSelect(profilesList[0].id);
+            handleProfileChange();
+            showToast('Perfis importados com sucesso.');
+          } else {
+            showToast('Estrutura de JSON inválida.', true);
+          }
+        } catch (err) {
+          showToast('Não foi possível ler o ficheiro JSON.', true);
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    // =========================================================================
+    // 5. AJUSTES DE CAPEX, TURNOS, MODALIDADES DE FATURAÇÃO & DESCONTOS
+    // =========================================================================
+    function onParameterInput() {
+      setDirtyState(true);
+      calculateAll();
+    }
+
+    function adjustVehiclePrices(deltaPct) {
+      const factor = 1 + (deltaPct / 100);
+      const newTractor = Math.round(getNumVal('tractorValue', 0) * factor);
+      const newTrailer = Math.round(getNumVal('trailerValue', 0) * factor);
+      setInputVal('tractorValue', newTractor);
+      setInputVal('trailerValue', newTrailer);
+      setDirtyState(true);
+      calculateAll();
+      showToast(`Valores da viatura ajustados em ${deltaPct > 0 ? '+' : ''}${deltaPct}%.`);
+    }
+
+    function applyProfessionalDiesel() {
+      const current = getNumVal('fuelPrice', 1.50);
+      setInputVal('fuelPrice', Math.max(0.20, current - 0.18).toFixed(2));
+      setDirtyState(true);
+      calculateAll();
+      showToast('Gasóleo Profissional (-0,18 €/L) aplicado.');
+    }
+
+    function setShiftMode(mode) {
+      currentShiftMode = mode;
+      const modes = ['1shift', '24h', '24h7d'];
+      modes.forEach(m => {
+        const btn = getEl('shift-btn-' + m);
+        if (!btn) return;
+        if (m === mode) {
+          btn.className = 'p-3 rounded-xl border-2 border-slate-900 bg-slate-100/80 text-left transition';
+        } else {
+          btn.className = 'p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-left transition';
+        }
+      });
+
+      const select = getEl('profileSelect');
+      const profile = (select && profilesList.find(p => p.id === select.value)) || profilesList[0] || DEFAULT_PROFILES[0];
+      const shift = getShiftConfig();
+
+      const effectiveDays = mode === '24h7d' ? 300 : (profile.workingDays || 250);
+      const effectiveAnnualKm = Math.round((profile.baseAnnualKm || 100000) * shift.kmMultiplier);
+      const effectiveDailyKm = Math.max(1, Math.round(effectiveAnnualKm / effectiveDays));
+
+      setInputVal('workingDays', effectiveDays);
+      setInputVal('annualKm', effectiveAnnualKm);
+      setInputVal('simKm', effectiveDailyKm);
+      setInputVal('simKmRange', Math.min(1200, effectiveDailyKm));
+      setInputVal('dailyIncludedKm', effectiveDailyKm);
+
+      calculateAll();
+    }
+
+    // Função validada e blindada para os cartões inferiores de Modalidade de Faturação
+    function setBillingMode(mode) {
+      try {
+        if (mode !== 'hybrid' && mode !== 'perkm' && mode !== 'daily') {
+          mode = 'hybrid';
+        }
+        currentBillingMode = mode;
+
+        const modes = ['hybrid', 'perkm', 'daily'];
+        modes.forEach(m => {
+          const btn = getEl('mode-btn-' + m);
+          if (!btn) return;
+          const titleSpan = btn.querySelector('span');
+          if (m === mode) {
+            btn.className = 'p-4 rounded-xl border-2 border-emerald-600 bg-emerald-50/60 text-left transition shadow-sm';
+            if (titleSpan) titleSpan.className = 'text-xs font-extrabold uppercase text-emerald-800';
+          } else {
+            btn.className = 'p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white text-left transition';
+            if (titleSpan) titleSpan.className = 'text-xs font-extrabold uppercase text-slate-700';
+          }
+        });
+
+        const plafondPanel = getEl('dailyPlafondPanel');
+        if (plafondPanel) {
+          if (mode === 'daily') {
+            plafondPanel.classList.remove('hidden');
+          } else {
+            plafondPanel.classList.add('hidden');
+          }
+        }
+
+        calculateAll();
+      } catch (err) {
+        console.error('Erro ao alternar modalidade de faturação:', err);
+      }
+    }
+
+    function syncSliderToNumber(baseId, val) {
+      setInputVal(baseId, val);
+      calculateAll();
+    }
+
+    function syncNumberToSlider(baseId, val) {
+      setInputVal(baseId + 'Range', val);
+      calculateAll();
+    }
+
+    function getMaxDiscountForFloor(marginPct, floorPct) {
+      const mBase = Math.max(0, marginPct) / 100;
+      const mFloor = Math.max(0, floorPct) / 100;
+      if (mBase <= mFloor) return 0;
+      return ((mBase - mFloor) / (1 + mBase)) * 100;
+    }
+
+    function applyDiscountTier(units, explicitDiscount) {
+      const marginPct = getNumVal('marginPct', 10);
+      const floorPct = getNumVal('floorMarginPct', 5);
+      const dMax = getMaxDiscountForFloor(marginPct, floorPct);
+
+      let targetDisc = explicitDiscount !== null ? explicitDiscount : Number(dMax.toFixed(2));
+      if (explicitDiscount !== null && targetDisc > dMax) {
+        targetDisc = Number(dMax.toFixed(2));
+      }
+
+      setInputVal('discountPct', targetDisc.toFixed(2));
+      setInputVal('discountPctRange', Math.min(12, targetDisc));
+      setInputVal('fleetSize', units);
+
+      highlightTierButtons(units);
+      highlightFleetButtons(units);
+      calculateAll();
+    }
+
+    function highlightTierButtons(activeUnits) {
+      document.querySelectorAll('.tier-btn').forEach(btn => {
+        const tierUnits = parseInt(btn.getAttribute('data-tier'), 10);
+        if (tierUnits === activeUnits) {
+          btn.className = 'tier-btn p-3 rounded-xl border-2 border-slate-900 bg-slate-100 text-left transition';
+        } else {
+          btn.className = 'tier-btn p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-left transition';
+        }
+      });
+    }
+
+    function syncDiscountRange(val) {
+      const num = Math.max(0, parseFloat(val) || 0);
+      setInputVal('discountPct', num.toFixed(2));
+      highlightTierButtons(-1);
+      calculateAll();
+    }
+
+    function syncDiscountInput(val) {
+      const num = Math.max(0, parseFloat(val) || 0);
+      setInputVal('discountPctRange', Math.min(12, num));
+      highlightTierButtons(-1);
+      calculateAll();
+    }
+
+    function setDiscountScope(scope) {
+      discountScope = scope;
+      const btnTotal = getEl('disc-scope-total');
+      const btnFixed = getEl('disc-scope-fixed');
+      if (btnTotal && btnFixed) {
+        if (scope === 'total') {
+          btnTotal.className = 'py-1.5 px-2.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-sm transition';
+          btnFixed.className = 'py-1.5 px-2.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition';
+        } else {
+          btnFixed.className = 'py-1.5 px-2.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-sm transition';
+          btnTotal.className = 'py-1.5 px-2.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition';
+        }
+      }
+      calculateAll();
+    }
+
+    function fixDiscountToFloor() {
+      const marginPct = getNumVal('marginPct', 10);
+      const floorPct = getNumVal('floorMarginPct', 5);
+      const dMax = getMaxDiscountForFloor(marginPct, floorPct);
+      setInputVal('discountPct', dMax.toFixed(2));
+      setInputVal('discountPctRange', Math.min(12, dMax));
+      calculateAll();
+      showToast(`Desconto corrigido para ${formatNum(dMax, 2)}% (piso de ${formatNum(floorPct, 1)}% garantido).`);
+    }
+
+    function setFleetSize(units) {
+      const safeUnits = Math.max(1, parseInt(units, 10) || 1);
+      setInputVal('fleetSize', safeUnits);
+      highlightFleetButtons(safeUnits);
+      calculateAll();
+    }
+
+    function onFleetSizeInput(val) {
+      const safeUnits = Math.max(1, parseInt(val, 10) || 1);
+      highlightFleetButtons(safeUnits);
+      calculateAll();
+    }
+
+    function highlightFleetButtons(activeUnits) {
+      document.querySelectorAll('.fleet-btn').forEach(btn => {
+        const u = parseInt(btn.getAttribute('data-fleet'), 10);
+        if (u === activeUnits) {
+          btn.className = 'fleet-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 text-white border border-slate-900 transition';
+        } else {
+          btn.className = 'fleet-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 transition';
+        }
+      });
+    }
+
+    // =========================================================================
+    // 6. MOTOR CENTRAL DE CÁLCULO & ATUALIZAÇÃO DA INTERFACE
+    // =========================================================================
+    function calculateAll() {
+      try {
+        // 1. CapEx e Financiamento
+        const tractorValue = Math.max(0, getNumVal('tractorValue', 125000));
+        const trailerValue = Math.max(0, getNumVal('trailerValue', 100000));
+        const extrasValue = Math.max(0, getNumVal('extrasValue', 0));
+        const amortMonths = Math.max(1, getNumVal('amortMonths', 96));
+        const residualPct = Math.min(90, Math.max(0, getNumVal('residualPct', 0)));
+        const interestRatePct = Math.max(0, getNumVal('interestRatePct', 0));
+
+        const capexTotal = tractorValue + trailerValue + extrasValue;
+        const residualValue = capexTotal * (residualPct / 100);
+        const amortizableValue = Math.max(0, capexTotal - residualValue);
+
+        // Amortização linear mensal + juros médios sobre capital investido
+        const monthlyAmortOnly = amortizableValue / amortMonths;
+        const avgCapitalInvested = (capexTotal + residualValue) / 2;
+        const monthlyInterest = avgCapitalInvested * ((interestRatePct / 100) / 12);
+        const monthlyCapexPayment = monthlyAmortOnly + monthlyInterest;
+        const annualCapexCost = monthlyCapexPayment * 12;
+        const annualAmortPure = monthlyAmortOnly * 12;
+
+        // 2. Turnos & Custos Fixos Operacionais
+        const shift = getShiftConfig();
+        const workingDays = Math.max(1, getNumVal('workingDays', 250));
+        const annualKm = Math.max(1, getNumVal('annualKm', 100000));
+        const driverMonthly = Math.max(0, getNumVal('driverMonthly', 4125));
+        const nightBonusMonthly = Math.max(0, getNumVal('nightBonusMonthly', 350));
+        const insuranceAnnual = Math.max(0, getNumVal('insuranceAnnual', 2500));
+        const iucAnnual = Math.max(0, getNumVal('iucAnnual', 650));
+        const ipoAtpAnnual = Math.max(0, getNumVal('ipoAtpAnnual', 250));
+        const telematicsAnnual = Math.max(0, getNumVal('telematicsAnnual', 480));
+        const structureAnnual = Math.max(0, getNumVal('structureAnnual', 3600));
+
+        const laborAnnual = (driverMonthly * 12 * shift.drivers) + (nightBonusMonthly * 12 * shift.nightDrivers);
+        const otherFixedAnnual = insuranceAnnual + iucAnnual + ipoAtpAnnual + telematicsAnnual + structureAnnual;
+        const totalFixedAnnual = annualCapexCost + laborAnnual + otherFixedAnnual;
+        const fixedCostPerDay = totalFixedAnnual / workingDays;
+        const dailyCapexImpact = annualCapexCost / workingDays;
+
+        // Atualizar Resumo CapEx & Turnos
+        if (getEl('summaryCapexTotal')) getEl('summaryCapexTotal').textContent = formatEUR(capexTotal, 0);
+        if (getEl('summaryAmortizable')) getEl('summaryAmortizable').textContent = formatEUR(amortizableValue, 0);
+        if (getEl('summaryMonthlyCapex')) getEl('summaryMonthlyCapex').textContent = formatEUR(monthlyCapexPayment, 2);
+        if (getEl('summaryDailyCapex')) getEl('summaryDailyCapex').textContent = `${formatEUR(dailyCapexImpact, 2)}/dia`;
+        if (getEl('badgeFixedDay')) getEl('badgeFixedDay').textContent = `${formatEUR(fixedCostPerDay, 2)}/dia`;
+        if (getEl('shiftBadge')) {
+          getEl('shiftBadge').textContent = `${shift.label} • ${formatInt(workingDays)} dias/ano • ${formatInt(annualKm)} km/ano`;
+        }
+
+        // 3. Custos Variáveis por Km
+        const fuelConsumption = Math.max(0, getNumVal('fuelConsumption', 32.0));
+        const fuelPrice = Math.max(0, getNumVal('fuelPrice', 1.50));
+        const autoAdblueEl = getEl('autoAdblue');
+        const autoAdblue = autoAdblueEl ? autoAdblueEl.checked : true;
+        const adbluePrice = Math.max(0, getNumVal('adbluePrice', 0.85));
+
+        let adbluePerKm = Math.max(0, getNumVal('adbluePerKm', 0.0136));
+        const adblueInput = getEl('adbluePerKm');
+        if (autoAdblue) {
+          adbluePerKm = ((fuelConsumption / 100) * 0.05) * adbluePrice;
+          if (adblueInput) {
+            adblueInput.value = adbluePerKm.toFixed(4);
+            adblueInput.readOnly = true;
+            adblueInput.classList.add('bg-slate-100');
+          }
+        } else if (adblueInput) {
+          adblueInput.readOnly = false;
+          adblueInput.classList.remove('bg-slate-100');
+        }
+
+        const maintPerKm = Math.max(0, getNumVal('maintPerKm', 0.050));
+        const tiresAnnual = Math.max(0, getNumVal('tiresAnnual', 1400));
+        const reeferPerKm = Math.max(0, getNumVal('reeferPerKm', 0.045));
+        const washAtpPerKm = Math.max(0, getNumVal('washAtpPerKm', 0.012));
+        const tollsPerKm = Math.max(0, getNumVal('tollsPerKm', 0.00));
+
+        const fuelPerKm = (fuelConsumption / 100) * fuelPrice;
+        const tiresPerKm = tiresAnnual / annualKm;
+        const variableCostPerKm = fuelPerKm + adbluePerKm + maintPerKm + tiresPerKm + reeferPerKm + washAtpPerKm + tollsPerKm;
+
+        if (getEl('badgeVarKm')) getEl('badgeVarKm').textContent = `${formatEUR(variableCostPerKm, 3)}/km`;
+
+        // 4. Parâmetros de Simulação & Descontos
+        const simKm = Math.max(1, getNumVal('simKm', 400));
+        const marginPct = Math.max(0, getNumVal('marginPct', 10));
+        const emptyKmPct = Math.min(80, Math.max(0, getNumVal('emptyKmPct', 12)));
+        const dailyIncludedKm = Math.max(1, getNumVal('dailyIncludedKm', 400));
+        const discountPct = Math.max(0, getNumVal('discountPct', 0));
+        const floorMarginPct = Math.max(0, getNumVal('floorMarginPct', 5.0));
+
+        if (getEl('simKmLabel')) getEl('simKmLabel').textContent = `${formatInt(simKm)} km`;
+        if (getEl('marginPctLabel')) getEl('marginPctLabel').textContent = `${formatNum(marginPct, 1)}%`;
+        if (getEl('emptyKmPctLabel')) getEl('emptyKmPctLabel').textContent = `${formatNum(emptyKmPct, 1)}%`;
+        if (getEl('badgeTargetMargin')) getEl('badgeTargetMargin').textContent = `${formatNum(marginPct, 1)}%`;
+
+        const totalDayCost = fixedCostPerDay + (variableCostPerKm * simKm);
+        if (getEl('headerDailyCost')) getEl('headerDailyCost').textContent = `Custo: ${formatEUR(totalDayCost, 2)}/dia`;
+
+        const marginFactor = 1 + (marginPct / 100);
+        const discRatio = discountPct / 100;
+        const fixedDiscFactor = 1 - discRatio;
+        const varDiscFactor = discountScope === 'total' ? (1 - discRatio) : 1.0;
+
+        // Tarifa 1: Modelo Híbrido
+        const hybridFixedDay = fixedCostPerDay * marginFactor * fixedDiscFactor;
+        const hybridVarKm = variableCostPerKm * marginFactor * varDiscFactor;
+        const hybridRevDay = hybridFixedDay + (hybridVarKm * simKm);
+
+        // Tarifa 2: 100% ao Quilómetro
+        const baseDailyKm = annualKm / workingDays;
+        const perKmTotalRate = ((fixedCostPerDay / baseDailyKm) * marginFactor * fixedDiscFactor) + (variableCostPerKm * marginFactor * varDiscFactor);
+        const perKmRevDay = perKmTotalRate * simKm;
+
+        // Tarifa 3: 100% à Diária
+        const dailyBasePrice = (fixedCostPerDay * marginFactor * fixedDiscFactor) + ((variableCostPerKm * dailyIncludedKm) * marginFactor * varDiscFactor);
+        const dailyExtraRate = variableCostPerKm * marginFactor * varDiscFactor;
+        const extraKm = Math.max(0, simKm - dailyIncludedKm);
+        const dailyRevDay = dailyBasePrice + (extraKm * dailyExtraRate);
+
+        let activeRevDay = hybridRevDay;
+        if (currentBillingMode === 'perkm') activeRevDay = perKmRevDay;
+        if (currentBillingMode === 'daily') activeRevDay = dailyRevDay;
+
+        const profitDay = activeRevDay - totalDayCost;
+        const profitYear = profitDay * workingDays;
+        const ebitdaYear = profitYear + annualAmortPure;
+        const realMarginPct = totalDayCost > 0 ? ((activeRevDay - totalDayCost) / totalDayCost) * 100 : 0;
+
+        // 5. Renderizar Cartões de Resumo da Modalidade Selecionada
+        renderBillingSummaryCards({
+          mode: currentBillingMode,
+          simKm,
+          baseDailyKm,
+          dailyIncludedKm,
+          extraKm,
+          hybridFixedDay,
+          hybridVarKm,
+          hybridRevDay,
+          perKmTotalRate,
+          perKmRevDay,
+          dailyBasePrice,
+          dailyExtraRate,
+          dailyRevDay,
+          totalDayCost,
+          profitDay
+        });
+
+        // 6. Atualizar Proteção do Piso de 5,0%
+        const dMaxFloor = getMaxDiscountForFloor(marginPct, floorMarginPct);
+        if (getEl('maxDiscountLabel')) getEl('maxDiscountLabel').textContent = `${formatNum(dMaxFloor, 2)}%`;
+        if (getEl('tier25Label')) getEl('tier25Label').textContent = `${formatNum(dMaxFloor, 2)}% (Teto Piso ${formatNum(floorMarginPct, 1)}%)`;
+        if (getEl('fixToFloorPct')) getEl('fixToFloorPct').textContent = `${formatNum(dMaxFloor, 2)}%`;
+
+        updateMarginGuardUI(realMarginPct, floorMarginPct);
+
+        // 7. Atualizar Tabela de Escalões & Tabela de Risco
+        renderTiersTable({
+          fixedCostPerDay,
+          variableCostPerKm,
+          marginFactor,
+          baseDailyKm,
+          simKm,
+          workingDays,
+          annualAmortPure,
+          dMaxFloor
+        });
+
+        renderRiskTable({
+          simKm,
+          fixedCostPerDay,
+          variableCostPerKm,
+          hybridFixedDay,
+          hybridVarKm,
+          perKmTotalRate,
+          dailyBasePrice,
+          dailyIncludedKm,
+          dailyExtraRate
+        });
+
+        // 8. Atualizar 8 KPIs Executivos
+        const cpkTotal = totalDayCost / simKm;
+        const cpkLoaded = cpkTotal / Math.max(0.2, 1 - (emptyKmPct / 100));
+        const activeVarRate = currentBillingMode === 'hybrid' ? hybridVarKm : (currentBillingMode === 'perkm' ? perKmTotalRate : dailyExtraRate);
+        const breakEvenKmDay = fixedCostPerDay / Math.max(0.001, activeVarRate - variableCostPerKm);
+        const contribMarginDay = activeRevDay - (variableCostPerKm * simKm);
+        const paybackYears = ebitdaYear > 0 ? (capexTotal / ebitdaYear) : 0;
+        const laborSharePct = totalDayCost > 0 ? ((laborAnnual / workingDays) / totalDayCost) * 100 : 0;
+        const energySharePct = totalDayCost > 0 ? (((fuelPerKm + adbluePerKm + reeferPerKm) * simKm) / totalDayCost) * 100 : 0;
+
+        renderExecutiveKPIs({
+          cpkTotal,
+          cpkLoaded,
+          emptyKmPct,
+          breakEvenKmDay,
+          contribMarginDay,
+          ebitdaYear,
+          paybackYears,
+          laborSharePct,
+          energySharePct
+        });
+
+        // 9. Atualizar Multiplicador de Frota
+        const fleetSize = Math.max(1, parseInt(getNumVal('fleetSize', 1), 10) || 1);
+        const reservePct = Math.max(0, getNumVal('driverReservePct', 10));
+        const baseDrivers = fleetSize * shift.drivers;
+        const reserveDrivers = Math.ceil(baseDrivers * (reservePct / 100));
+        const totalDrivers = baseDrivers + reserveDrivers;
+
+        const fleetRevYear = activeRevDay * workingDays * fleetSize;
+        const fleetEbitdaYear = ebitdaYear * fleetSize;
+        const fleetNetYear = profitYear * fleetSize;
+        const fleetCapexTotal = capexTotal * fleetSize;
+        const fleetKmYear = annualKm * fleetSize;
+        const fleetFuelLiters = (annualKm / 100) * fuelConsumption * fleetSize;
+
+        if (getEl('fleetRevYear')) getEl('fleetRevYear').textContent = formatEUR(fleetRevYear, 0);
+        if (getEl('fleetKmYear')) getEl('fleetKmYear').textContent = `${formatInt(fleetKmYear)} km/ano totais`;
+        if (getEl('fleetEbitdaYear')) getEl('fleetEbitdaYear').textContent = formatEUR(fleetEbitdaYear, 0);
+        if (getEl('fleetNetYear')) getEl('fleetNetYear').textContent = `Lucro Líquido: ${formatEUR(fleetNetYear, 0)}`;
+        if (getEl('fleetDriversTotal')) getEl('fleetDriversTotal').textContent = `${formatInt(totalDrivers)} motoristas`;
+        if (getEl('fleetDriversDetail')) getEl('fleetDriversDetail').textContent = `${formatInt(baseDrivers)} base + ${formatInt(reserveDrivers)} reserva`;
+        if (getEl('fleetCapexTotal')) getEl('fleetCapexTotal').textContent = formatEUR(fleetCapexTotal, 0);
+        if (getEl('fleetFuelYear')) getEl('fleetFuelYear').textContent = `${formatInt(fleetFuelLiters)} L gasóleo/ano`;
+
+        // 10. Atualizar Texto da Proposta Comercial
+        updateProposalOutput({
+          shift,
+          simKm,
+          discountPct,
+          fuelPrice,
+          dailyIncludedKm,
+          hybridFixedDay,
+          hybridVarKm,
+          hybridRevDay,
+          perKmTotalRate,
+          perKmRevDay,
+          dailyBasePrice,
+          dailyExtraRate,
+          dailyRevDay,
+          fleetSize,
+          fleetRevYear,
+          fleetEbitdaYear,
+          realMarginPct
+        });
+      } catch (err) {
+        console.error('Erro no motor de cálculo:', err);
+      }
+    }
+
+    // =========================================================================
+    // 7. FUNÇÕES DE RENDERIZAÇÃO DOS BLOCOS VISUAIS
+    // =========================================================================
+    function renderBillingSummaryCards(d) {
+      const container = getEl('billingSummaryCards');
+      if (!container) return;
+
+      if (d.mode === 'hybrid') {
+        container.innerHTML = `
+          <div class="bg-emerald-50/80 border-2 border-emerald-600 rounded-xl p-4">
+            <span class="text-[11px] font-bold uppercase text-emerald-800 block">Diária Fixa ao Cliente</span>
+            <span class="text-xl sm:text-2xl font-extrabold text-emerald-950 block mt-0.5">${formatEUR(d.hybridFixedDay)}</span>
+            <span class="text-xs text-emerald-700 mt-1 block">Por dia operacional</span>
+          </div>
+          <div class="bg-amber-50/80 border-2 border-amber-500 rounded-xl p-4">
+            <span class="text-[11px] font-bold uppercase text-amber-900 block">Tarifa Variável / Km</span>
+            <span class="text-xl sm:text-2xl font-extrabold text-amber-950 block mt-0.5">${formatEUR(d.hybridVarKm, 3)}</span>
+            <span class="text-xs text-amber-800 mt-1 block">Por km percorrido</span>
+          </div>
+          <div class="bg-slate-900 text-white rounded-xl p-4">
+            <span class="text-[11px] font-bold uppercase text-slate-400 block">Total Estimado (${formatInt(d.simKm)} km)</span>
+            <span class="text-xl sm:text-2xl font-extrabold text-white block mt-0.5">${formatEUR(d.hybridRevDay)}</span>
+            <span class="text-xs text-emerald-400 mt-1 block">Lucro dia: ${d.profitDay >= 0 ? '+' : ''}${formatEUR(d.profitDay)}</span>
+          </div>
+        `;
+      } else if (d.mode === 'perkm') {
+        container.innerHTML = `
+          <div class="bg-emerald-50/80 border-2 border-emerald-600 rounded-xl p-4">
+            <span class="text-[11px] font-bold uppercase text-emerald-800 block">Tarifa Única 100% ao Km</span>
+            <span class="text-xl sm:text-2xl font-extrabold text-emerald-950 block mt-0.5">${formatEUR(d.perKmTotalRate, 3)}</span>
+            <span class="text-xs text-emerald-700 mt-1 block">Diluição base: ${formatInt(d.baseDailyKm)} km/dia</span>
+          </div>
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+            <span class="text-[11px] font-bold uppercase text-slate-500 block">Distância Simulada</span>
+            <span class="text-xl sm:text-2xl font-extrabold text-slate-900 block mt-0.5">${formatInt(d.simKm)} km</span>
+            <span class="text-xs text-slate-500 mt-1 block">Custo dia: ${formatEUR(d.totalDayCost)}</span>
+          </div>
+          <div class="bg-slate-900 text-white rounded-xl p-4">
+            <span class="text-[11px] font-bold uppercase text-slate-400 block">Total Estimado da Rota</span>
+            <span class="text-xl sm:text-2xl font-extrabold text-white block mt-0.5">${formatEUR(d.perKmRevDay)}</span>
+            <span class="text-xs text-emerald-400 mt-1 block">Lucro dia: ${d.profitDay >= 0 ? '+' : ''}${formatEUR(d.profitDay)}</span>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div class="bg-emerald-50/80 border-2 border-emerald-600 rounded-xl p-4">
+            <span class="text-[11px] font-bold uppercase text-emerald-800 block">Diária Fechada (até ${formatInt(d.dailyIncludedKm)} km)</span>
+            <span class="text-xl sm:text-2xl font-extrabold text-emerald-950 block mt-0.5">${formatEUR(d.dailyBasePrice)}</span>
+            <span class="text-xs text-emerald-700 mt-1 block">Plafond diário incluído</span>
+          </div>
+          <div class="bg-amber-50/80 border-2 border-amber-500 rounded-xl p-4">
+            <span class="text-[11px] font-bold uppercase text-amber-900 block">Tarifa Km Extra</span>
+            <span class="text-xl sm:text-2xl font-extrabold text-amber-950 block mt-0.5">${formatEUR(d.dailyExtraRate, 3)}</span>
+            <span class="text-xs text-amber-800 mt-1 block">Excedente atual: +${formatInt(d.extraKm)} km</span>
+          </div>
+          <div class="bg-slate-900 text-white rounded-xl p-4">
+            <span class="text-[11px] font-bold uppercase text-slate-400 block">Total Estimado (${formatInt(d.simKm)} km)</span>
+            <span class="text-xl sm:text-2xl font-extrabold text-white block mt-0.5">${formatEUR(d.dailyRevDay)}</span>
+            <span class="text-xs text-emerald-400 mt-1 block">Lucro dia: ${d.profitDay >= 0 ? '+' : ''}${formatEUR(d.profitDay)}</span>
+          </div>
+        `;
+      }
+    }
+
+    function updateMarginGuardUI(realMarginPct, floorMarginPct) {
+      const badge = getEl('badgeRealMargin');
+      const box = getEl('marginGuardBox');
+      const dot = getEl('marginGuardDot');
+      const title = getEl('marginGuardTitle');
+      const desc = getEl('marginGuardDesc');
+      const fixBtn = getEl('fixToFloorBtn');
+
+      const belowFloor = realMarginPct < (floorMarginPct - 0.03);
+      if (badge) badge.textContent = `Margem Líquida Real: ${formatNum(realMarginPct, 1)}%`;
+
+      if (!belowFloor) {
+        if (badge) badge.className = 'px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200';
+        if (box) box.className = 'p-3.5 rounded-xl border bg-emerald-50 border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3';
+        if (dot) dot.className = 'text-emerald-600 font-bold mt-0.5';
+        if (title) {
+          title.className = 'text-emerald-950 block';
+          title.textContent = `Margem Líquida Protegida (${formatNum(realMarginPct, 1)}%)`;
+        }
+        if (desc) {
+          desc.className = 'text-emerald-800';
+          desc.textContent = `O desconto aplicado respeita o piso mínimo de ${formatNum(floorMarginPct, 1)}% da TFS.`;
+        }
+        if (fixBtn) fixBtn.classList.add('hidden');
+      } else {
+        if (badge) badge.className = 'px-3 py-1 rounded-lg bg-red-50 text-red-700 text-xs font-bold border border-red-200';
+        if (box) box.className = 'p-3.5 rounded-xl border-2 bg-red-50 border-red-400 flex flex-col sm:flex-row sm:items-center justify-between gap-3';
+        if (dot) dot.className = 'text-red-600 font-bold mt-0.5';
+        if (title) {
+          title.className = 'text-red-950 block';
+          title.textContent = realMarginPct < 0
+            ? `ALERTA DE PREJUÍZO (${formatNum(realMarginPct, 1)}%) — Abaixo do Custo!`
+            : `ALERTA: Margem Líquida (${formatNum(realMarginPct, 1)}%) abaixo do Piso de ${formatNum(floorMarginPct, 1)}%`;
+        }
+        if (desc) {
+          desc.className = 'text-red-800';
+          desc.textContent = 'Reduza o desconto comercial para garantir a rentabilidade mínima exigida pela TFS.';
+        }
+        if (fixBtn) fixBtn.classList.remove('hidden');
+      }
+    }
+
+    function renderTiersTable(t) {
+      const tbody = getEl('tiersTableBody');
+      if (!tbody) return;
+
+      const tiers = [
+        { units: 1, label: '1 Conjunto Dedicado', disc: 0.00 },
+        { units: 5, label: '5 Conjuntos Dedicados', disc: Math.min(2.00, t.dMaxFloor) },
+        { units: 10, label: '10 Conjuntos Dedicados', disc: Math.min(3.50, t.dMaxFloor) },
+        { units: 25, label: '25 Conjuntos (Teto Piso)', disc: Number(t.dMaxFloor.toFixed(2)) }
+      ];
+
+      const totalDayCost = t.fixedCostPerDay + (t.variableCostPerKm * t.simKm);
+      const currentFleet = Math.max(1, parseInt(getNumVal('fleetSize', 1), 10) || 1);
+
+      tbody.innerHTML = tiers.map(tier => {
+        const dRatio = tier.disc / 100;
+        const fFactor = 1 - dRatio;
+        const vFactor = discountScope === 'total' ? fFactor : 1.0;
+
+        const hybFixed = t.fixedCostPerDay * t.marginFactor * fFactor;
+        const hybVar = t.variableCostPerKm * t.marginFactor * vFactor;
+        const perKm = ((t.fixedCostPerDay / t.baseDailyKm) * t.marginFactor * fFactor) + (t.variableCostPerKm * t.marginFactor * vFactor);
+
+        const revDay = currentBillingMode === 'perkm' ? (perKm * t.simKm) : (hybFixed + hybVar * t.simKm);
+        const realMargin = totalDayCost > 0 ? ((revDay - totalDayCost) / totalDayCost) * 100 : 0;
+        const annualRev = revDay * t.workingDays * tier.units;
+        const annualEbitda = ((revDay - totalDayCost) * t.workingDays + t.annualAmortPure) * tier.units;
+        const activeRow = currentFleet === tier.units;
+
+        return `
+          <tr onclick="applyDiscountTier(${tier.units}, ${tier.disc})" class="cursor-pointer transition ${activeRow ? 'bg-emerald-50/70 font-semibold' : 'hover:bg-slate-50'}">
+            <td class="py-2.5 px-3 font-bold text-slate-900 whitespace-nowrap">${tier.label}</td>
+            <td class="py-2.5 px-3 text-right font-bold text-slate-700">${formatNum(tier.disc, 2)}%</td>
+            <td class="py-2.5 px-3 text-right whitespace-nowrap text-slate-800">${formatEUR(hybFixed)}/d + ${formatEUR(hybVar, 3)}/km</td>
+            <td class="py-2.5 px-3 text-right font-semibold text-slate-800">${formatEUR(perKm, 3)}/km</td>
+            <td class="py-2.5 px-3 text-right font-bold text-emerald-700">${formatNum(realMargin, 1)}%</td>
+            <td class="py-2.5 px-3 text-right font-semibold text-slate-900">${formatEUR(annualRev, 0)}</td>
+            <td class="py-2.5 px-3 text-right font-extrabold text-emerald-800">${formatEUR(annualEbitda, 0)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderRiskTable(r) {
+      const tbody = getEl('riskTableBody');
+      if (!tbody) return;
+
+      const scenarios = [
+        { name: 'Dia Curto (-40% Km)', km: Math.max(20, Math.round(r.simKm * 0.6)) },
+        { name: 'Rota Base Contratada', km: r.simKm },
+        { name: 'Dia Longo (+40% Km)', km: Math.round(r.simKm * 1.4) }
+      ];
+
+      tbody.innerHTML = scenarios.map(s => {
+        const cost = r.fixedCostPerDay + (r.variableCostPerKm * s.km);
+        let rev = r.hybridFixedDay + (r.hybridVarKm * s.km);
+        if (currentBillingMode === 'perkm') {
+          rev = r.perKmTotalRate * s.km;
+        } else if (currentBillingMode === 'daily') {
+          rev = r.dailyBasePrice + (Math.max(0, s.km - r.dailyIncludedKm) * r.dailyExtraRate);
+        }
+        const net = rev - cost;
+        const margin = cost > 0 ? (net / cost) * 100 : 0;
+
+        return `
+          <tr class="hover:bg-slate-50">
+            <td class="py-2.5 px-3 font-bold text-slate-800">${s.name}</td>
+            <td class="py-2.5 px-3 text-right font-semibold text-slate-700">${formatInt(s.km)} km</td>
+            <td class="py-2.5 px-3 text-right text-slate-700">${formatEUR(cost)}</td>
+            <td class="py-2.5 px-3 text-right font-bold text-slate-900">${formatEUR(rev)}</td>
+            <td class="py-2.5 px-3 text-right font-bold ${net >= 0 ? 'text-emerald-700' : 'text-red-600'}">${net >= 0 ? '+' : ''}${formatEUR(net)}</td>
+            <td class="py-2.5 px-3 text-right font-bold ${margin >= 0 ? 'text-emerald-700' : 'text-red-600'}">${formatNum(margin, 1)}%</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderExecutiveKPIs(k) {
+      const grid = getEl('executiveKpisGrid');
+      if (!grid) return;
+
+      const items = [
+        { label: '1. CPK Total (Custo/Km)', val: `${formatEUR(k.cpkTotal, 3)}/km`, sub: 'Custo global por km' },
+        { label: '2. CPK Real Carregado', val: `${formatEUR(k.cpkLoaded, 3)}/km`, sub: `Com ${formatNum(k.emptyKmPct, 0)}% em vazio` },
+        { label: '3. Break-Even (Ponto Morto)', val: `${formatNum(k.breakEvenKmDay, 1)} km/dia`, sub: 'Mínimo diário p/ equilíbrio' },
+        { label: '4. Margem de Contribuição', val: formatEUR(k.contribMarginDay), sub: 'Receita − variáveis / dia' },
+        { label: '5. EBITDA Anual / Viatura', val: formatEUR(k.ebitdaYear, 0), sub: 'Caixa operacional anual' },
+        { label: '6. Payback do CapEx', val: k.paybackYears > 0 ? `${formatNum(k.paybackYears, 1)} anos` : 'N/A', sub: 'Retorno do investimento' },
+        { label: '7. Peso da Mão de Obra', val: `${formatNum(k.laborSharePct, 1)}%`, sub: 'Motoristas / custo total' },
+        { label: '8. Peso do Combustível', val: `${formatNum(k.energySharePct, 1)}%`, sub: 'Gasóleo + AdBlue + Frio' }
+      ];
+
+      grid.innerHTML = items.map(item => `
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+          <span class="text-[11px] font-bold text-slate-500 block truncate">${item.label}</span>
+          <span class="text-sm sm:text-base font-extrabold text-slate-900 block mt-1">${item.val}</span>
+          <span class="text-[10px] text-slate-500 block mt-0.5 truncate">${item.sub}</span>
+        </div>
+      `).join('');
+    }
+
+    function updateProposalOutput(d) {
+      const textarea = getEl('proposalOutput');
+      const select = getEl('profileSelect');
+      if (!textarea) return;
+
+      const vehicleName = (select && select.options[select.selectedIndex])
+        ? select.options[select.selectedIndex].text
+        : 'Viatura Frota TFS';
+      const today = new Date().toLocaleDateString('pt-PT');
+
+      const discText = d.discountPct > 0
+        ? `• Desconto Comercial Aplicado: ${formatNum(d.discountPct, 2)}% (${discountScope === 'total' ? 'sobre preço total' : 'apenas na diária fixa'})\n`
+        : '';
+
+      let modeDetails = '';
+      if (currentBillingMode === 'hybrid') {
+        modeDetails =
+          `• Modalidade: Modelo Híbrido (Diária Fixa + €/km Variável)\n` +
+          discText +
+          `• Diária Fixa: ${formatEUR(d.hybridFixedDay)} / dia\n` +
+          `• Tarifa Variável: ${formatEUR(d.hybridVarKm, 3)} / km\n` +
+          `• Estimativa Diária (${formatInt(d.simKm)} km): ${formatEUR(d.hybridRevDay)} / dia`;
+      } else if (currentBillingMode === 'perkm') {
+        modeDetails =
+          `• Modalidade: 100% ao Quilómetro\n` +
+          discText +
+          `• Tarifa Única: ${formatEUR(d.perKmTotalRate, 3)} / km\n` +
+          `• Estimativa Diária (${formatInt(d.simKm)} km): ${formatEUR(d.perKmRevDay)} / dia`;
+      } else {
+        modeDetails =
+          `• Modalidade: 100% à Diária (Plafond ${formatInt(d.dailyIncludedKm)} km/dia)\n` +
+          discText +
+          `• Diária Fechada: ${formatEUR(d.dailyBasePrice)} / dia\n` +
+          `• Quilómetro Excedente: ${formatEUR(d.dailyExtraRate, 3)} / km\n` +
+          `• Estimativa Diária (${formatInt(d.simKm)} km): ${formatEUR(d.dailyRevDay)} / dia`;
+      }
+
+      textarea.value =
+        `PROPOSTA COMERCIAL — TRANSPORTES FLORÊNCIO & SILVA (TFS)\n` +
+        `Data: ${today} | Viatura: ${vehicleName}\n` +
+        `Regime: ${d.shift.label} | Dimensão Contratada: ${formatInt(d.fleetSize)} viatura(s)\n` +
+        `----------------------------------------------------------------------\n` +
+        `${modeDetails}\n` +
+        `----------------------------------------------------------------------\n` +
+        `Projeção Contrato (${formatInt(d.fleetSize)} viat.): Faturação Anual ${formatEUR(d.fleetRevYear, 0)} | EBITDA ${formatEUR(d.fleetEbitdaYear, 0)} | Margem Líquida ${formatNum(d.realMarginPct, 1)}%\n` +
+        `Referência Gasóleo: ${formatEUR(d.fuelPrice)}/L s/ IVA (sujeito a indexação energética). Valores acrescem IVA à taxa legal.`;
+    }
+
+    function copyProposalToClipboard() {
+      const textarea = getEl('proposalOutput');
+      if (!textarea) return;
+      textarea.select();
+      textarea.setSelectionRange(0, 999999);
+      try {
+        document.execCommand('copy');
+        showToast('Proposta comercial copiada para a área de transferência.');
+      } catch (err) {
+        showToast('Não foi possível copiar automaticamente.', true);
+      }
+    }
+
+    // =========================================================================
+    // 8. NOTIFICAÇÃO TOAST & ARRANQUE AUTO-VERIFICADO
+    // =========================================================================
+    let toastTimeout = null;
+    function showToast(message, isError = false) {
+      const toast = getEl('toast');
+      const msgEl = getEl('toast-msg');
+      const iconEl = getEl('toast-icon');
+      if (!toast || !msgEl || !iconEl) return;
+
+      msgEl.textContent = message;
+      iconEl.textContent = isError ? '⚠' : '✓';
+      iconEl.className = isError ? 'text-amber-400 font-bold' : 'text-emerald-400 font-bold';
+
+      toast.classList.remove('translate-y-24', 'opacity-0');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.add('translate-y-24', 'opacity-0');
+      }, 3000);
+    }
+
+    function initApp() {
+      try {
+        loadProfilesFromStorage();
+        renderProfileSelect('tfs-articulado-frigo');
+        handleProfileChange();
+        setBillingMode('hybrid');
+      } catch (err) {
+        console.error('Falha na inicialização do simulador TFS:', err);
+        profilesList = cloneDefaults();
+        renderProfileSelect('tfs-articulado-frigo');
+        calculateAll();
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      initApp();
+    }
+  </script>
+</body>
+</html>
