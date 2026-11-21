@@ -120,44 +120,30 @@
 
       <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="space-y-4">
         <div>
-          <label for="loginEmail"
-            class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Email Corporativo</label>
-          <input type="email" id="loginEmail" required placeholder="utilizador@tfs.pt"
-            class="w-full bg-slate-800/80 border border-slate-700 text-white text-sm rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition placeholder:text-slate-500">
+          <label for="loginEmail" class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Email Corporativo</label>
+          <input type="email" id="loginEmail" required placeholder="utilizador@tfs.pt" class="w-full bg-slate-800/80 border border-slate-700 text-white text-sm rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition placeholder:text-slate-500">
         </div>
 
         <div>
-          <label for="loginPassword"
-            class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Palavra-passe</label>
-          <input type="password" id="loginPassword" required placeholder="••••••••••••"
-            class="w-full bg-slate-800/80 border border-slate-700 text-white text-sm rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition placeholder:text-slate-500">
+          <label for="loginPassword" class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Palavra-passe</label>
           <div class="relative">
-            <input type="password" id="loginPassword" required placeholder="••••••••••••"
-              class="w-full bg-slate-800/80 border border-slate-700 text-white text-sm rounded-xl pl-4 pr-11 py-3 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition placeholder:text-slate-500">
-            <button type="button" onclick="togglePasswordVisibility('loginPassword', this)"
-              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 transition"
-              title="Mostrar/Ocultar palavra-passe">
-              <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            <input type="password" id="loginPassword" required placeholder="••••••••••••" class="w-full bg-slate-800/80 border border-slate-700 text-white text-sm rounded-xl pl-4 pr-11 py-3 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition placeholder:text-slate-500">
+            <button type="button" onclick="togglePasswordVisibility('loginPassword', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 transition" title="Mostrar/Ocultar palavra-passe">
+              <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
             </button>
           </div>
         </div>
 
-        <div id="loginAlertBox"
-          class="hidden p-3 rounded-xl bg-red-950/50 border border-red-800/60 text-xs text-red-300">
+        <div id="loginAlertBox" class="hidden p-3 rounded-xl bg-red-950/50 border border-red-800/60 text-xs text-red-300">
           <span id="loginAlertMsg">Credenciais incorretas ou utilizador não autorizado.</span>
         </div>
 
-        <button type="submit" id="loginSubmitBtn"
-          class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-emerald-900/30 transition flex items-center justify-center gap-2">
+        <button type="submit" id="loginSubmitBtn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-emerald-900/30 transition flex items-center justify-center gap-2">
           <span id="loginBtnText">Iniciar Sessão</span>
-          <svg id="loginBtnSpinner" class="hidden animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg"
-            fill="none" viewBox="0 0 24 24">
+          <svg id="loginBtnSpinner" class="hidden animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
           </svg>
@@ -166,28 +152,14 @@
 
       <div class="mt-6 pt-5 border-t border-slate-800/80 flex flex-col gap-3 text-center text-xs text-slate-400">
         <p class="text-slate-400 leading-relaxed text-[11px]">
-          🔒 <strong class="text-slate-300">Acesso Restrito:</strong> O registo de novos utilizadores é gerido
-          internamente pelos administradores no interior da plataforma.
-          🔒 <strong class="text-slate-300">Acesso Restrito:</strong> O registo de novos colaboradores é gerido
-          internamente dentro do simulador.
+          🔒 <strong class="text-slate-300">Acesso Restrito:</strong> O registo de novos colaboradores é gerido internamente pelos administradores dentro do simulador.
         </p>
-        <div class="flex items-center justify-between text-xs pt-1">
-          <button type="button" onclick="requestPasswordResetPrompt()"
-            class="text-slate-400 hover:text-emerald-400 transition underline underline-offset-2">
+        <div class="flex items-center justify-center text-xs pt-1">
+          <button type="button" onclick="requestPasswordResetPrompt()" class="text-slate-400 hover:text-emerald-400 transition underline underline-offset-2">
             Esqueceu a palavra-passe?
           </button>
-          <button type="button" onclick="openSupabaseConfigModal()"
-            class="text-slate-500 hover:text-slate-300 transition">
-            <button type="button" onclick="openInitialAdminModal()"
-              class="text-emerald-400 hover:text-emerald-300 font-semibold transition"
-              title="Criar o utilizador inicial caso ainda não o tenha configurado">
-              ✨ Criar Utilizador Inicial
-            </button>
         </div>
-        <div class="text-center pt-1 border-t border-slate-800/40">
-          <button type="button" onclick="openSupabaseConfigModal()"
-            class="text-slate-500 hover:text-slate-300 transition text-[11px]">
-            ⚙️ Configurar Base de Dados
+      </div>
           </button>
         </div>
       </div>
@@ -1238,26 +1210,17 @@
           <form onsubmit="handleUpdateOwnPassword(event)" class="space-y-2">
             <div>
               <label for="newPasswordInput" class="block font-semibold text-slate-700 mb-1">Nova Palavra-passe</label>
-              <input type="password" id="newPasswordInput" required minlength="6" placeholder="Mínimo 6 caracteres"
-                class="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-600">
               <div class="relative">
-                <input type="password" id="newPasswordInput" required minlength="6" placeholder="Mínimo 6 caracteres"
-                  class="w-full border border-slate-300 rounded-xl pl-3 pr-10 py-2 text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-600">
-                <button type="button" onclick="togglePasswordVisibility('newPasswordInput', this)"
-                  class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 transition"
-                  title="Mostrar/Ocultar palavra-passe">
-                  <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                <input type="password" id="newPasswordInput" required minlength="6" placeholder="Mínimo 6 caracteres" class="w-full border border-slate-300 rounded-xl pl-3 pr-10 py-2 text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-600">
+                <button type="button" onclick="togglePasswordVisibility('newPasswordInput', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 transition" title="Mostrar/Ocultar palavra-passe">
+                  <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
                 </button>
               </div>
             </div>
-            <button type="submit" id="btnUpdatePassword"
-              class="w-full px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition">
+            <button type="submit" id="btnUpdatePassword" class="w-full px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition">
               Atualizar Palavra-passe
             </button>
           </form>
@@ -1266,8 +1229,7 @@
         <!-- Criar Novo Utilizador para a Equipa (Gestão Interna) -->
         <div class="border border-slate-200 rounded-2xl p-4 space-y-3 bg-emerald-50/50">
           <div class="flex items-center justify-between">
-            <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wider">Registar Novo Utilizador da Equipa
-            </h4>
+            <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wider">Registar Novo Utilizador da Equipa</h4>
             <span class="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">Admin Interno</span>
           </div>
           <p class="text-[11px] text-slate-600">
@@ -1275,103 +1237,27 @@
           </p>
           <form onsubmit="handleCreateTeamUser(event)" class="space-y-2.5">
             <div>
-              <label for="newTeamUserEmail" class="block font-semibold text-slate-700 mb-1">Email do Colaborador
-                *</label>
-              <input type="email" id="newTeamUserEmail" required placeholder="colega@tfs.pt"
-                class="w-full border border-slate-300 bg-white rounded-xl px-3 py-2 text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-600">
+              <label for="newTeamUserEmail" class="block font-semibold text-slate-700 mb-1">Email do Colaborador *</label>
+              <input type="email" id="newTeamUserEmail" required placeholder="colega@tfs.pt" class="w-full border border-slate-300 bg-white rounded-xl px-3 py-2 text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-600">
             </div>
             <div>
-              <label for="newTeamUserPassword" class="block font-semibold text-slate-700 mb-1">Palavra-passe Temporária
-                *</label>
-              <input type="password" id="newTeamUserPassword" required minlength="6"
-                placeholder="Definir palavra-passe segura"
-                class="w-full border border-slate-300 bg-white rounded-xl px-3 py-2 text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-600">
+              <label for="newTeamUserPassword" class="block font-semibold text-slate-700 mb-1">Palavra-passe Temporária *</label>
               <div class="relative">
-                <input type="password" id="newTeamUserPassword" required minlength="6"
-                  placeholder="Definir palavra-passe segura"
-                  class="w-full border border-slate-300 bg-white rounded-xl pl-3 pr-10 py-2 text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-600">
-                <button type="button" onclick="togglePasswordVisibility('newTeamUserPassword', this)"
-                  class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 transition"
-                  title="Mostrar/Ocultar palavra-passe">
-                  <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                <input type="password" id="newTeamUserPassword" required minlength="6" placeholder="Definir palavra-passe segura" class="w-full border border-slate-300 bg-white rounded-xl pl-3 pr-10 py-2 text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-600">
+                <button type="button" onclick="togglePasswordVisibility('newTeamUserPassword', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 transition" title="Mostrar/Ocultar palavra-passe">
+                  <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
                 </button>
               </div>
             </div>
-            <button type="submit" id="btnCreateUser"
-              class="w-full px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition shadow">
+            <button type="submit" id="btnCreateUser" class="w-full px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition shadow">
               Criar Acesso de Colaborador
             </button>
           </form>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- ========================================================================= -->
-  <!-- MODAL: REGISTAR PRIMEIRO ADMINISTRADOR (INICIALIZAÇÃO RÁPIDA) -->
-  <!-- ========================================================================= -->
-  <div id="initialAdminModal"
-    class="fixed inset-0 z-50 hidden bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 no-print">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-        <div>
-          <span class="text-xs font-bold uppercase tracking-wider text-emerald-700">Primeira Configuração</span>
-          <h3 class="text-base font-bold text-slate-900">Criar Utilizador Inicial</h3>
-        </div>
-        <button type="button" onclick="closeInitialAdminModal()"
-          class="text-slate-400 hover:text-slate-600 p-2 text-lg font-bold">✕</button>
-      </div>
-
-      <form onsubmit="handleCreateInitialAdmin(event)" class="py-4 space-y-3.5 text-xs">
-        <p class="text-slate-600 leading-relaxed">
-          Defina o seu email e palavra-passe para aceder ao simulador como administrador.
-        </p>
-
-        <div>
-          <label for="initAdminEmail" class="block font-semibold text-slate-700 mb-1">O Seu Email *</label>
-          <input type="email" id="initAdminEmail" required placeholder="admin@tfs.pt"
-            class="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-emerald-600">
-        </div>
-
-        <div>
-          <label for="initAdminPassword" class="block font-semibold text-slate-700 mb-1">Palavra-passe Desejada
-            *</label>
-          <div class="relative">
-            <input type="password" id="initAdminPassword" required minlength="6" placeholder="Mínimo 6 caracteres"
-              class="w-full border border-slate-300 rounded-xl pl-3 pr-10 py-2 text-xs outline-none focus:ring-2 focus:ring-emerald-600">
-            <button type="button" onclick="togglePasswordVisibility('initAdminPassword', this)"
-              class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 transition"
-              title="Mostrar/Ocultar palavra-passe">
-              <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <div id="initAdminAlertBox" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700">
-          <span id="initAdminAlertMsg"></span>
-        </div>
-
-        <div class="pt-2 flex justify-end gap-2">
-          <button type="button" onclick="closeInitialAdminModal()"
-            class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
-          <button type="submit" id="btnSubmitInitAdmin"
-            class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow transition flex items-center gap-2">
-            <span id="btnSubmitInitAdminText">Criar e Entrar</span>
-          </button>
-        </div>
-      </form>
     </div>
   </div>
 
@@ -1516,6 +1402,8 @@
     // =========================================================================
     // 1. CONFIGURAÇÃO & CONEXÃO PERMANENTE SUPABASE
     // =========================================================================
+    const DEFAULT_SUPABASE_URL = 'https://zjallhhodyfynymcpnbo.supabase.co';
+    const DEFAULT_SUPABASE_KEY = 'sb_publishable_SsIDnXbLxXo5ldMCmGOuPw_YdK5LtHI';
     const SUPABASE_STORAGE_URL_KEY = 'tfs_supabase_url_v1';
     const SUPABASE_STORAGE_KEY_KEY = 'tfs_supabase_anon_key_v1';
 
@@ -1544,7 +1432,12 @@
       } catch (e) {
         console.warn('localStorage bloqueado', e);
       }
-      return null;
+
+      // 3. Padrão permanente embutido (funciona 100% online no GitHub Pages e localmente)
+      return {
+        url: DEFAULT_SUPABASE_URL,
+        anonKey: DEFAULT_SUPABASE_KEY
+      };
     }
 
     async function initSupabase() {
@@ -1771,85 +1664,6 @@
           </svg>
         `;
         btn.title = 'Mostrar palavra-passe';
-      }
-    }
-
-    function openInitialAdminModal() {
-      const modal = getEl('initialAdminModal');
-      const alertBox = getEl('initAdminAlertBox');
-      if (alertBox) alertBox.classList.add('hidden');
-      if (modal) modal.classList.remove('hidden');
-    }
-
-    function closeInitialAdminModal() {
-      const modal = getEl('initialAdminModal');
-      if (modal) modal.classList.add('hidden');
-    }
-
-    async function handleCreateInitialAdmin(event) {
-      event.preventDefault();
-      const emailInput = getEl('initAdminEmail');
-      const passInput = getEl('initAdminPassword');
-      const btn = getEl('btnSubmitInitAdmin');
-      const btnText = getEl('btnSubmitInitAdminText');
-      const alertBox = getEl('initAdminAlertBox');
-      const alertMsg = getEl('initAdminAlertMsg');
-
-      const email = emailInput ? emailInput.value.trim() : '';
-      const password = passInput ? passInput.value : '';
-
-      if (!email || !password || password.length < 6) {
-        if (alertBox && alertMsg) {
-          alertMsg.textContent = 'Introduza um email válido e palavra-passe com min. 6 caracteres.';
-          alertBox.classList.remove('hidden');
-        }
-        return;
-      }
-
-      if (!supabaseClient) {
-        const ok = await initSupabase();
-        if (!ok) {
-          openSupabaseConfigModal();
-          return;
-        }
-      }
-
-      if (btn) btn.disabled = true;
-      if (btnText) btnText.textContent = 'A criar conta...';
-      if (alertBox) alertBox.classList.add('hidden');
-
-      try {
-        const { data, error } = await supabaseClient.auth.signUp({
-          email,
-          password
-        });
-
-        if (error) {
-          if (alertBox && alertMsg) {
-            alertMsg.textContent = `Erro ao registar: ${error.message}`;
-            alertBox.classList.remove('hidden');
-          }
-        } else if (data?.user) {
-          currentUser = data.user;
-          if (data.session) {
-            showToast('Conta criada com sucesso!');
-            closeInitialAdminModal();
-            onUserAuthenticated(currentUser);
-          } else {
-            alert('Conta criada com sucesso! Se a confirmação de email estiver ativa no Supabase, verifique o seu email. Caso contrário, introduza agora os dados no formulário de login.');
-            closeInitialAdminModal();
-            if (getEl('loginEmail')) getEl('loginEmail').value = email;
-            if (getEl('loginPassword')) getEl('loginPassword').value = password;
-          }
-        }
-      } catch (err) {
-        if (alertBox && alertMsg) {
-          alertMsg.textContent = 'Erro de comunicação com o Supabase.';
-          alertBox.classList.remove('hidden');
-        }
-      } finally {
-        if (btn) btn.disabled = false;
-        if (btnText) btnText.textContent = 'Criar e Entrar';
       }
     }
 
