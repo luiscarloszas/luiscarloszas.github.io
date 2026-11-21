@@ -1,17 +1,30 @@
 -- =============================================================================
 -- TFS • TRANSPORTES FLORÊNCIO & SILVA
--- Script de Configuração da Base de Dados Supabase (PostgreSQL)
--- =============================================================================
--- Instruções:
--- 1. Abra o painel do seu projeto no Supabase: https://supabase.com/dashboard
--- 2. Vá ao menu "SQL Editor" na barra lateral esquerda.
--- 3. Crie uma "New Query", cole todo o conteúdo deste ficheiro e clique em "RUN".
+-- Script de Configuração da Base de Dados Supabase (PostgreSQL) - CORRIGIDO
 -- =============================================================================
 
--- 1. EXTENSÃO PARA UUIDs
+-- 1. LIMPEZA & REPARAÇÃO DO SISTEMA DE AUTENTICAÇÃO (Remove o erro Database error querying schema)
+ALTER TABLE IF EXISTS public.clients DROP CONSTRAINT IF EXISTS clients_user_id_fkey;
+ALTER TABLE IF EXISTS public.proposals DROP CONSTRAINT IF EXISTS proposals_user_id_fkey;
+
+-- Limpar qualquer registo incompleto que tenha sido inserido manualmente via SQL
+DELETE FROM auth.users WHERE email = 'admin@tfs.pt';
+
+-- Normalizar quaisquer tokens NULL existentes na tabela de autenticação
+UPDATE auth.users
+SET 
+  confirmation_token = COALESCE(confirmation_token, ''),
+  recovery_token = COALESCE(recovery_token, ''),
+  email_change = COALESCE(email_change, ''),
+  email_change_token_new = COALESCE(email_change_token_new, ''),
+  email_change_token_current = COALESCE(email_change_token_current, ''),
+  phone_change = COALESCE(phone_change, ''),
+  phone_change_token = COALESCE(phone_change_token, '')
+WHERE confirmation_token IS NULL OR recovery_token IS NULL;
+
+-- 2. EXTENSÃO PARA UUIDs & FUNÇÃO AUXILIAR
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. FUNÇÃO AUXILIAR PARA ATUALIZAR TIMESTAMP
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -25,7 +38,7 @@ $$ language 'plpgsql';
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS public.clients (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    user_id UUID,
     name TEXT NOT NULL,
     nif TEXT,
     contact_person TEXT,
@@ -37,14 +50,12 @@ CREATE TABLE IF NOT EXISTS public.clients (
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Trigger para updated_at em clients
 DROP TRIGGER IF EXISTS tr_clients_updated_at ON public.clients;
 CREATE TRIGGER tr_clients_updated_at
     BEFORE UPDATE ON public.clients
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- Índices para pesquisa rápida
 CREATE INDEX IF NOT EXISTS idx_clients_name ON public.clients(name);
 CREATE INDEX IF NOT EXISTS idx_clients_nif ON public.clients(nif);
 CREATE INDEX IF NOT EXISTS idx_clients_created_at ON public.clients(created_at DESC);
@@ -54,7 +65,7 @@ CREATE INDEX IF NOT EXISTS idx_clients_created_at ON public.clients(created_at D
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS public.proposals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    user_id UUID,
     client_id UUID REFERENCES public.clients(id) ON DELETE SET NULL,
     client_name TEXT,
     proposal_ref TEXT NOT NULL,
@@ -77,81 +88,42 @@ CREATE TABLE IF NOT EXISTS public.proposals (
     net_margin_pct NUMERIC DEFAULT 0,
     proposal_text TEXT,
     simulation_params JSONB,
-    status TEXT DEFAULT 'Rascunho', -- 'Rascunho', 'Apresentada', 'Em Negociação', 'Aprovada', 'Recusada'
+    status TEXT DEFAULT 'Rascunho',
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Trigger para updated_at em proposals
 DROP TRIGGER IF EXISTS tr_proposals_updated_at ON public.proposals;
 CREATE TRIGGER tr_proposals_updated_at
     BEFORE UPDATE ON public.proposals
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- Índices para pesquisa e filtragem de propostas
 CREATE INDEX IF NOT EXISTS idx_proposals_ref ON public.proposals(proposal_ref);
 CREATE INDEX IF NOT EXISTS idx_proposals_client_id ON public.proposals(client_id);
 CREATE INDEX IF NOT EXISTS idx_proposals_status ON public.proposals(status);
 CREATE INDEX IF NOT EXISTS idx_proposals_created_at ON public.proposals(created_at DESC);
 
 -- =============================================================================
--- 5. SEGURANÇA E POLÍTICAS DE ACESSO (Row Level Security - RLS)
+-- 5. PERMISSÕES & SEGURANÇA (RLS)
 -- =============================================================================
--- Ativação da RLS para garantir que apenas utilizadores autenticados tenham acesso aos dados
+GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role, supabase_auth_admin;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, anon, authenticated, service_role, supabase_auth_admin;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role, supabase_auth_admin;
+
 ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.proposals ENABLE ROW LEVEL SECURITY;
 
--- Políticas para a tabela CLIENTS (utilizadores autenticados podem ver, criar, atualizar e eliminar)
-DROP POLICY IF EXISTS "Autenticados podem ler clientes" ON public.clients;
-CREATE POLICY "Autenticados podem ler clientes"
-    ON public.clients FOR SELECT
+DROP POLICY IF EXISTS "Acesso total a clientes para autenticados" ON public.clients;
+CREATE POLICY "Acesso total a clientes para autenticados"
+    ON public.clients FOR ALL
     TO authenticated
-    USING (true);
+    USING (true)
+    WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Autenticados podem inserir clientes" ON public.clients;
-CREATE POLICY "Autenticados podem inserir clientes"
-    ON public.clients FOR INSERT
+DROP POLICY IF EXISTS "Acesso total a propostas para autenticados" ON public.proposals;
+CREATE POLICY "Acesso total a propostas para autenticados"
+    ON public.proposals FOR ALL
     TO authenticated
-    WITH CHECK (auth.role() = 'authenticated');
-
-DROP POLICY IF EXISTS "Autenticados podem atualizar clientes" ON public.clients;
-CREATE POLICY "Autenticados podem atualizar clientes"
-    ON public.clients FOR UPDATE
-    TO authenticated
-    USING (auth.role() = 'authenticated');
-
-DROP POLICY IF EXISTS "Autenticados podem eliminar clientes" ON public.clients;
-CREATE POLICY "Autenticados podem eliminar clientes"
-    ON public.clients FOR DELETE
-    TO authenticated
-    USING (auth.role() = 'authenticated');
-
--- Políticas para a tabela PROPOSALS (utilizadores autenticados podem ver, criar, atualizar e eliminar)
-DROP POLICY IF EXISTS "Autenticados podem ler propostas" ON public.proposals;
-CREATE POLICY "Autenticados podem ler propostas"
-    ON public.proposals FOR SELECT
-    TO authenticated
-    USING (true);
-
-DROP POLICY IF EXISTS "Autenticados podem inserir propostas" ON public.proposals;
-CREATE POLICY "Autenticados podem inserir propostas"
-    ON public.proposals FOR INSERT
-    TO authenticated
-    WITH CHECK (auth.role() = 'authenticated');
-
-DROP POLICY IF EXISTS "Autenticados podem atualizar propostas" ON public.proposals;
-CREATE POLICY "Autenticados podem atualizar propostas"
-    ON public.proposals FOR UPDATE
-    TO authenticated
-    USING (auth.role() = 'authenticated');
-
-DROP POLICY IF EXISTS "Autenticados podem eliminar propostas" ON public.proposals;
-CREATE POLICY "Autenticados podem eliminar propostas"
-    ON public.proposals FOR DELETE
-    TO authenticated
-    USING (auth.role() = 'authenticated');
-
--- =============================================================================
--- FIM DO SCRIPT
--- =============================================================================
+    USING (true)
+    WITH CHECK (true);
